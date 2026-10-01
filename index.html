@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>搜打撤 · 撤离射击</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+
+    <div id="hud">
+      <!-- 准星 -->
+      <div id="crosshair">
+        <div class="ch-line ch-top"></div>
+        <div class="ch-line ch-bottom"></div>
+        <div class="ch-line ch-left"></div>
+        <div class="ch-line ch-right"></div>
+        <div class="ch-dot"></div>
+      </div>
+
+      <!-- 命中标记 -->
+      <div id="hitmarker"><span></span></div>
+
+      <!-- 血量 -->
+      <div id="health-panel">
+        <div id="health-bar"><div id="health-fill"></div></div>
+        <div id="health-text">100</div>
+      </div>
+
+      <!-- 弹药 -->
+      <div id="ammo-panel">
+        <div id="weapon-name">经典 Classic</div>
+        <div id="ammo-text">12 / 36</div>
+      </div>
+
+      <!-- 换弹倒计时 -->
+      <div id="reload-indicator">
+        <svg viewBox="0 0 64 64">
+          <circle class="reload-ring-bg" cx="32" cy="32" r="28"></circle>
+          <circle class="reload-ring" cx="32" cy="32" r="28"></circle>
+        </svg>
+        <span id="reload-text">0.0</span>
+      </div>
+
+      <!-- 顶部信息：击杀 / 倒计时 / 金币 / 背包 -->
+      <div id="top-bar">
+        <div id="kill-count">击杀 0</div>
+        <div id="time-text">10:00</div>
+        <div class="top-right">
+          <div id="gold-text">💰 0</div>
+          <div id="backpack-count">背包 0/9</div>
+        </div>
+      </div>
+
+      <!-- 开箱 / 撤离进度条 -->
+      <div id="action-bar">
+        <div id="action-label">撤离中…</div>
+        <div id="action-track"><div id="action-fill"></div></div>
+      </div>
+
+      <!-- 交互提示 -->
+      <div id="interact"></div>
+
+      <!-- 短提示 -->
+      <div id="prompt"></div>
+
+      <!-- 拾取提示 -->
+      <div id="pickup-toast"></div>
+
+      <!-- 精英刷新横幅 -->
+      <div id="elite-banner">精英 bot 刷新</div>
+
+      <!-- 武器商店面板 -->
+      <div id="shop-panel">
+        <div id="shop-items"></div>
+      </div>
+
+      <!-- Tab 背包面板 -->
+      <div id="backpack-panel">
+        <div class="bp-title">🎒 背包 <span id="bp-gold" class="bp-gold">💰 金币 0</span></div>
+        <div id="backpack-grid"></div>
+        <div class="sb-section">
+          <div class="sb-subtitle" id="sb-subtitle">🔒 保险箱（0/4）</div>
+          <div id="safebox-grid"></div>
+        </div>
+        <div id="bp-discard">🗑️ 拖到这里丢弃（直接删除）</div>
+      </div>
+
+      <!-- 受伤闪屏 -->
+      <div id="damage-flash"></div>
+
+      <!-- 提示 -->
+      <div id="hint">点击鼠标锁定视角 · WASD 移动 · 左键射击 · 右键开镜 · R 换弹 · F 开箱 · 长按 Tab 背包 · 1-5 切枪 · Shift 静步</div>
+    </div>
+
+    <!-- 主菜单（仓库 + 统计） -->
+    <div id="menu-panel">
+      <div class="menu-box">
+        <div class="menu-head">
+          <h1>搜打撤</h1>
+          <div class="menu-sub">搜刮 · 战斗 · 撤离</div>
+        </div>
+        <div class="menu-body">
+          <div class="menu-side">
+            <div id="menu-points">💎 点数 <b id="menu-points-num">0</b></div>
+            <div id="menu-stats"></div>
+            <button id="start-run-btn">开始新一局</button>
+            <button id="open-shop-btn">🏪 仓库商店</button>
+            <div class="menu-btns-row">
+              <button id="tutorial-btn">📖 新手教程</button>
+              <button id="redeem-btn">🎁 兑换码</button>
+            </div>
+            <div id="save-actions">
+              <button id="export-save-btn">导出存档</button>
+              <button id="import-save-btn">导入存档</button>
+              <button id="delete-save-btn">删除存档</button>
+              <input type="file" id="import-file" accept=".json,application/json" hidden>
+            </div>
+            <div class="menu-foot">收集战利品塞满背包，走到地图中心撤离点站 10 秒带出；死亡则本局背包全丢，保险箱内物品可带出。</div>
+          </div>
+          <div class="menu-warehouse">
+            <div class="warehouse-wrap">
+              <div class="wh-col">
+                <div class="wh-label">珍贵展示柜</div>
+                <div id="warehouse-left"></div>
+              </div>
+              <div class="wh-col">
+                <div class="wh-label">仓库</div>
+                <div id="warehouse-right"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 仓库商店 -->
+    <div id="menu-shop">
+      <div class="menu-shop-box">
+        <div class="ms-head">
+          <div class="ms-title">🏪 仓库商店</div>
+          <div class="ms-points">💎 点数 <b id="ms-points-num">0</b></div>
+          <button id="ms-close-btn" title="关闭">✕</button>
+        </div>
+        <div class="ms-body">
+          <div class="ms-section">
+            <div class="ms-section-title">📦 解锁格子</div>
+            <div class="ms-row" id="ms-precious-row"></div>
+            <div class="ms-row" id="ms-warehouse-row"></div>
+            <div class="ms-row" id="ms-safe-row"></div>
+          </div>
+          <div class="ms-section">
+            <div class="ms-section-title">🎨 展示柜皮肤</div>
+            <div id="ms-skins"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 开局进入方式选择 -->
+    <div id="loadout-panel">
+      <div class="loadout-box">
+        <div class="lo-head">
+          <div class="lo-title">🎯 选择进入方式</div>
+          <div class="lo-points">💎 点数 <b id="lo-points">0</b></div>
+        </div>
+        <div class="lo-section">
+          <div class="lo-section-title">进入方式（二选一）</div>
+          <div id="lo-entries"></div>
+        </div>
+        <div class="lo-section">
+          <div class="lo-section-title">可选装备</div>
+          <div id="lo-addons"></div>
+        </div>
+        <div id="lo-summary"></div>
+        <div class="lo-btns">
+          <button id="lo-cancel-btn">返回</button>
+          <button id="lo-confirm-btn">进入地图</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 监视详情页（珍贵展示柜物品放大至全屏） -->
+    <div id="item-detail">
+      <div class="detail-box">
+        <div class="detail-head">
+          <div class="detail-title">🔍 监视</div>
+          <button id="detail-close-btn" title="关闭">✕</button>
+        </div>
+        <div id="detail-body"></div>
+      </div>
+    </div>
+
+    <!-- 新手教程 -->
+    <div id="tutorial-panel">
+      <div class="tutorial-box">
+        <div class="tut-head">
+          <div class="tut-title">📖 新手教程 · 玩法说明</div>
+          <button id="tutorial-close-btn" title="关闭">✕</button>
+        </div>
+        <div class="tut-body">
+          <h3>🎯 目标：搜刮 → 战斗 → 撤离</h3>
+          <p>进图搜刮物资塞满 9 格背包，走到地图中心撤离点站 10 秒带出。撤离成功则背包物品存入仓库；死亡则本局背包全丢（保险箱内物品除外）。</p>
+          <h3>🕹️ 操作</h3>
+          <p>WASD 移动 · 鼠标锁定视角 · 左键射击 · 右键开镜 · R 换弹 · 1-5 切枪 · Shift 静步 · F 开箱 · 长按 Tab 打开背包。</p>
+          <h3>🚪 进入方式</h3>
+          <p>开局选择进入方式：eco 进入（50 血 · 免费）或正常进入（100 血 · 300 点）；可选购护甲（半甲 +25 血 / 全甲 +50 血）、血包、开局武器（鬼魅 / 蜂刺 / 狂徒）。</p>
+          <h3>💰 局内金币</h3>
+          <p>击杀 Bot 或开箱会掉落金币；靠近武器商店按 2/3/4/5 买枪、6 买血包。金币每局清零。</p>
+          <h3>🔒 保险箱</h3>
+          <p>把贵重物品拖进保险箱，死亡也能带出。保险箱格子靠商店累计消费点数解锁（满 10000 点自动 +1 格，最多 4 格）。</p>
+          <h3>💎 点数（元货币）</h3>
+          <p>仓库物品「售出」换成点数，点数用于解锁仓库格子、购买展示柜皮肤、强化开局装备，持久保存。</p>
+          <h3>👾 敌人</h3>
+          <p>普通 Bot 巡逻 / 会听枪声来查；游戏 5 分钟后刷新精英 Bot（1000 血、掉落更好）。</p>
+          <h3>✨ 品质与磨损</h3>
+          <p>物品进仓库后随机获得磨损（越小品质越好、图标越清晰）；点击珍贵展示柜物品可进入「监视」查看详情。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 兑换码 -->
+    <div id="redeem-panel">
+      <div class="redeem-box">
+        <div class="redeem-head">
+          <div class="redeem-title">🎁 兑换码</div>
+          <button id="redeem-close-btn" title="关闭">✕</button>
+        </div>
+        <div class="redeem-body">
+          <p class="redeem-tip">输入兑换码可解锁全部内容。</p>
+          <input id="redeem-input" type="text" placeholder="请输入兑换码" maxlength="32" autocomplete="off">
+          <div class="redeem-btns">
+            <button id="redeem-cancel-btn">取消</button>
+            <button id="redeem-confirm-btn">兑换</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 结算界面 -->
+    <div id="result-panel">
+      <div class="result-box">
+        <div id="result-title">撤离成功！</div>
+        <div id="result-stats"></div>
+        <div class="result-btns">
+          <button id="result-retry-btn">再战一局</button>
+          <button id="result-menu-btn">返回仓库</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="menu-toast"></div>
+
+  <script src="js/three.min.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/effects.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/items.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/boxes.js"></script>
+  <script src="js/extract.js"></script>
+  <script src="js/shop.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/enemy.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/hud.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

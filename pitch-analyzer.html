@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>音效音调分析器</title>
+<style>
+  html,body{margin:0;padding:0;background:#101014;color:#e8e8e8;font-family:'Segoe UI','Microsoft YaHei',system-ui,sans-serif;}
+  body{padding:24px 32px;}
+  h1{font-size:22px;margin:0 0 6px;}
+  .sub{color:#888;font-size:13px;margin-bottom:18px;}
+  #file{display:block;margin-bottom:20px;font-size:14px;color:#cbd5ff;}
+  .card{background:#17171c;border:1px solid #26262e;border-radius:8px;padding:16px 18px;margin-bottom:16px;}
+  .card h2{font-size:16px;margin:0 0 8px;color:#cfe3ff;}
+  canvas{display:block;width:100%;background:#0a0a0c;border-radius:4px;margin-bottom:10px;}
+  .notes{font-size:13px;line-height:1.7;font-family:Consolas,monospace;color:#c8c8c8;}
+  .notes b{color:#8ff0c0;font-weight:600;}
+  .note-tag{display:inline-block;background:#1f2a24;color:#9ff0b0;border-radius:4px;padding:1px 8px;margin-right:6px;font-weight:700;}
+</style>
+</head>
+<body>
+  <h1>击杀音效 · 音调分析器</h1>
+  <div class="sub">选择（可多选）mp3 文件，自动提取音高轨迹并识别音符。音符以 A4=440Hz 计算。</div>
+  <input type="file" id="file" accept="audio/*" multiple>
+  <div id="results"></div>
+
+<script>
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+function midiNote(f) { return 69 + 12 * Math.log2(f / 440); }
+function noteName(m) { const n = Math.round(m); return NOTE_NAMES[((n % 12) + 12) % 12] + (Math.floor(n / 12) - 1); }
+function cents(m) { return Math.round((m - Math.round(m)) * 100); }
+function median(arr) { const s = arr.slice().sort((a,b)=>a-b); return s[Math.floor(s.length/2)]; }
+
+// 自相关基频估计：返回该帧主频（Hz），静音返回 0
+function estimatePitch(frame, sr) {
+  const minLag = Math.max(2, Math.floor(sr / 2000)); // 上限 2000Hz
+  const maxLag = Math.min(frame.length - 1, Math.floor(sr / 70)); // 下限 70Hz
+  let bestLag = -1, bestScore = -Infinity;
+  const n = frame.length;
+  for (let lag = minLag; lag <= maxLag; lag++) {
+    let num = 0, d1 = 0, d2 = 0;
+    for (let i = 0; i + lag < n; i++) {
+      const a = frame[i], b = frame[i + lag];
+      num += a * b; d1 += a * a; d2 += b * b;
+    }
+    const score = num / Math.sqrt((d1 * d2) || 1);
+    if (score > bestScore) { bestScore = score; bestLag = lag; }
+  }
+  if (bestLag <= 0) return 0;
+  return sr / bestLag;
+}
+
+// 块平均降采样（近似低通），提速并减少计算
+function downsample(samples, sr, targetSr) {
+  const factor = sr / targetSr;
+  const outLen = Math.floor(samples.length / factor);
+  const out = new Float32Array(outLen);
+  for (let i = 0; i < outLen; i++) {
+    const s = Math.floor(i * factor), e = Math.floor((i + 1) * factor);
+    let sum = 0;
+    for (let j = s; j < e; j++) sum += samples[j];
+    out[i] = sum / (e - s);
+  }
+  return { data: out, sr: targetSr };
+}
+
+function buildTrack(samples, sr) {
+  const { data, sr: dsr } = downsample(samples, sr, 16000);
+  const win = 1024, hop = 256;
+  const track = [];
+  for (let start = 0; start + win <= data.length; start += hop) {
+    let rms = 0;
+    for (let i = 0; i < win; i++) rms += data[start + i] * data[start + i];
+    rms = Math.sqrt(rms / win);
+    let f = 0;
+    if (rms > 0.008) {
+      const frame = data.subarray(start, start + win);
+      f = estimatePitch(frame, dsr);
+    }
+    track.push({ t: start / dsr, f });
+  }
+  return track;
+}
+
+// 把音高轨迹切分成稳定音符段
+function segment(track) {
+  const notes = [];
+  let cur = null;
+  const flush = () => { if (cur && cur.samples.length >= 3 && (cur.end - cur.start) > 0.035) notes.push(cur); cur = null; };
+  for (const p of track) {
+    if (p.f <= 0) { flush(); continue; }
+    const m = midiNote(p.f);
+    if (!cur) { cur = { start: p.t, end: p.t, samples: [p.f], lastMidi: m }; }
+    else if (Math.abs(m - cur.lastMidi) < 0.45) { cur.samples.push(p.f); cur.end = p.t; cur.lastMidi = m; }
+    else { flush(); cur = { start: p.t, end: p.t, samples: [p.f], lastMidi: m }; }
+  }
+  flush();
+  return notes.map(n => {
+    const f = median(n.samples);
+    const m = midiNote(f);
+    return { start: n.start, end: n.end, dur: n.end - n.start, freq: f, name: noteName(m), cents: cents(m) };
+  });
+}
+
+function draw(track, canvas) {
+  const W = canvas.width, H = canvas.height;
+  const g = canvas.getContext('2d');
+  g.clearRect(0, 0, W, H);
+  g.fillStyle = '#0a0a0c'; g.fillRect(0, 0, W, H);
+  const fmin = 80, fmax = 2000;
+  const tmax = track.length ? track[track.length - 1].t : 1;
+  const padL = 46, padR = 10, padT = 10, padB = 22;
+  const X = t => padL + t / tmax * (W - padL - padR);
+  const Y = f => H - padB - (Math.log2(f) - Math.log2(fmin)) / (Math.log2(fmax) - Math.log2(fmin)) * (H - padT - padB);
+
+  g.font = '10px Consolas'; g.fillStyle = '#666';
+  for (let m = 36; m <= 95; m++) { // C2 ~ B6
+    const f = 440 * Math.pow(2, (m - 69) / 12);
+    if (f < fmin || f > fmax) continue;
+    const isC = NOTE_NAMES[m % 12] === 'C';
+    g.strokeStyle = isC ? '#3a3a44' : '#232329';
+    g.beginPath(); g.moveTo(padL, Y(f)); g.lineTo(W - padR, Y(f)); g.stroke();
+    if (isC) { g.fillStyle = '#888'; g.fillText(noteName(m), 4, Y(f) + 3); }
+  }
+  // 时间轴
+  g.fillStyle = '#777';
+  for (let t = 0; t <= tmax; t += 0.5) g.fillText(t.toFixed(1) + 's', X(t), H - 6);
+
+  g.strokeStyle = '#00e0ff'; g.lineWidth = 1.5; g.beginPath();
+  let started = false;
+  for (const p of track) {
+    if (p.f <= 0) { started = false; continue; }
+    const px = X(p.t), py = Y(Math.min(fmax, Math.max(fmin, p.f)));
+    if (!started) { g.moveTo(px, py); started = true; } else g.lineTo(px, py);
+  }
+  g.stroke();
+}
+
+const fileInput = document.getElementById('file');
+const resultsEl = document.getElementById('results');
+
+fileInput.addEventListener('change', async () => {
+  resultsEl.innerHTML = '';
+  const files = Array.from(fileInput.files).sort((a,b) => {
+    const ka = parseInt(a.name.match(/_(\d)_/)?.[1] || '9'), kb = parseInt(b.name.match(/_(\d)_/)?.[1] || '9');
+    return ka - kb;
+  });
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  for (const file of files) {
+    try {
+      const buf = await file.arrayBuffer();
+      const audio = await ctx.decodeAudioData(buf);
+      let samples = audio.getChannelData(0);
+      if (audio.numberOfChannels > 1) {
+        const r = audio.getChannelData(1);
+        const mix = new Float32Array(samples.length);
+        for (let i = 0; i < samples.length; i++) mix[i] = (samples[i] + r[i]) / 2;
+        samples = mix;
+      }
+      const track = buildTrack(samples, audio.sampleRate);
+      const notes = segment(track);
+
+      const card = document.createElement('div'); card.className = 'card';
+      const h = document.createElement('h2'); h.textContent = file.name; card.appendChild(h);
+      const cv = document.createElement('canvas'); cv.width = 920; cv.height = 200; card.appendChild(cv);
+      draw(track, cv);
+      const nl = document.createElement('div'); nl.className = 'notes';
+      if (notes.length) {
+        nl.innerHTML = notes.map((n, i) =>
+          `<span class="note-tag">${n.name}</span>${n.start.toFixed(2)}s 起 · ${n.freq.toFixed(1)}Hz · 时长 ${n.dur.toFixed(2)}s`
+        ).join('<br>');
+      } else nl.textContent = '（未识别到稳定音符）';
+      card.appendChild(nl);
+      resultsEl.appendChild(card);
+    } catch (err) {
+      const card = document.createElement('div'); card.className = 'card';
+      card.textContent = file.name + ' 解析失败：' + err.message;
+      resultsEl.appendChild(card);
+    }
+  }
+});
+</script>
+</body>
+</html>
