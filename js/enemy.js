@@ -48,7 +48,7 @@ const ENEMIES = (function () {
   }
 
   function onKill(dead) {
-    if (dead.elite) { // 精英：掉精英战利品，不计入击杀、不补刷
+    if (dead.elite) { // 精英：掉 3 个黄箱，不计入击杀、不补刷
       spawnDeathDrop(dead.pos.x, dead.pos.z, true);
       return false;
     }
@@ -60,19 +60,15 @@ const ENEMIES = (function () {
     return true;
   }
 
-  // 掉落：普通 10% 血包 / 50% 随机战利品 / 40% 100 哈基币；精英 = 1 个稀有度更好的战利品 + 2 个普通战利品
-  function rollNormalDrop() {
-    const r = Math.random();
-    return r < 0.1 ? ITEMS.medkit() : (r < 0.6 ? ITEMS.generateLoot() : ITEMS.gold(100));
-  }
+  // 掉落：敌人不再直接掉物品，改为掉「黄色箱子」（开启 1s，60s 未开启即消失；箱内按概率出 1 件战利品）
   function spawnDeathDrop(x, z, elite) {
     if (elite) {
-      BOXES.spawnDrop(ITEMS.generateEliteLoot(), x, z);
-      BOXES.spawnDrop(rollNormalDrop(), x + 0.7, z);
-      BOXES.spawnDrop(rollNormalDrop(), x - 0.7, z);
+      BOXES.spawnYellowBox(x, z);
+      BOXES.spawnYellowBox(x + 0.7, z);
+      BOXES.spawnYellowBox(x - 0.7, z);
       return;
     }
-    BOXES.spawnDrop(rollNormalDrop(), x, z);
+    BOXES.spawnYellowBox(x, z);
   }
 
   function respawnAtFarthest() {

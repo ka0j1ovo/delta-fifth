@@ -1,12 +1,14 @@
-// 地面可开箱（开完 60s 后恢复）+ 掉落物 + 拾取
+// 地面可开箱：棕色箱（固定点位，开完 60s 后换位恢复）+ 黄色箱（敌人掉落，60s 未开启即消失）+ 掉落物 + 拾取
 const BOXES = (function () {
   let scene = null, playerObj = null;
-  const boxes = [];   // { group, x, z, opened, respawnAt }
-  const drops = [];   // { group, item, x, z }
+  const boxes = [];        // 棕色地面箱 { group, x, z, opened, respawnAt }
+  const yellowBoxes = [];  // 黄色敌人箱 { group, x, z, opened, expireAt }
+  const drops = [];        // 掉落物 { group, item, x, z }
   let opening = null, progress = 0, elapsed = 0;
 
-  const OPEN_TIME = 1.0, OPEN_RANGE = 3, PICK_RANGE = 1.5;
-  const BOX_RESPAWN = 60, DROP_LIFETIME = 60;
+  const OPEN_TIME_BROWN = 3.0, OPEN_TIME_YELLOW = 1.0;
+  const OPEN_RANGE = 3, PICK_RANGE = 1.5;
+  const BOX_RESPAWN = 60, DROP_LIFETIME = 60, YELLOW_LIFETIME = 60;
 
   const BOX_POSITIONS = [
     { x: -16, z: -8 }, { x: 16, z: -8 }, { x: -16, z: 12 }, { x: 16, z: 12 }, { x: 0, z: -20 },
@@ -17,19 +19,19 @@ const BOXES = (function () {
 
   function init(sc, player) { scene = sc; playerObj = player; }
 
-  function buildBoxMesh() {
+  function buildBoxMesh(bodyColor, lidColor, emoji) {
     const group = new THREE.Group();
     const body = new THREE.Mesh(
       new THREE.BoxGeometry(0.8, 0.8, 0.8),
-      new THREE.MeshStandardMaterial({ color: 0x8a6d3b, roughness: 0.6 })
+      new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.6 })
     );
     body.position.y = 0.4; body.castShadow = true;
     const lid = new THREE.Mesh(
       new THREE.BoxGeometry(0.85, 0.1, 0.85),
-      new THREE.MeshStandardMaterial({ color: 0x6d542c, roughness: 0.6 })
+      new THREE.MeshStandardMaterial({ color: lidColor, roughness: 0.6 })
     );
     lid.position.y = 0.85;
-    const spr = MAP.sprite('📦', 1.1); spr.position.y = 1.6;
+    const spr = MAP.sprite(emoji, 1.1); spr.position.y = 1.6;
     group.add(body, lid, spr);
     return group;
   }
@@ -38,16 +40,26 @@ const BOXES = (function () {
     clear();
     const pool = BOX_POSITIONS.slice().sort(() => Math.random() - 0.5).slice(0, 5);
     for (const p of pool) {
-      const group = buildBoxMesh();
+      const group = buildBoxMesh(0x8a6d3b, 0x6d542c, '📦');
       group.position.set(p.x, 0, p.z);
       scene.add(group);
-      boxes.push({ group, x: p.x, z: p.z, opened: false, respawnAt: 0 });
+      boxes.push({ group, x: p.x, z: p.z, opened: false, respawnAt: 0, kind: 'brown', openTime: OPEN_TIME_BROWN });
     }
+  }
+
+  // 黄色敌人箱：开启 1s，60s 未被开启即消失
+  function spawnYellowBox(x, z) {
+    const group = buildBoxMesh(0xf0c22e, 0xb8920f, '📦');
+    group.position.set(x, 0, z);
+    scene.add(group);
+    yellowBoxes.push({ group, x, z, opened: false, expireAt: elapsed + YELLOW_LIFETIME, kind: 'yellow', openTime: OPEN_TIME_YELLOW });
   }
 
   function clear() {
     for (const b of boxes) scene.remove(b.group);
     boxes.length = 0;
+    for (const b of yellowBoxes) scene.remove(b.group);
+    yellowBoxes.length = 0;
     for (const d of drops) scene.remove(d.group);
     drops.length = 0;
     opening = null; progress = 0; elapsed = 0;
@@ -75,7 +87,7 @@ const BOXES = (function () {
   function getNearestBox() {
     if (!playerObj || !playerObj.alive) return null;
     let best = null, bd = Infinity;
-    for (const b of boxes) {
+    for (const b of boxes.concat(yellowBoxes)) {
       if (b.opened) continue;
       const dx = b.x - playerObj.pos.x, dz = b.z - playerObj.pos.z;
       const d = dx * dx + dz * dz;
@@ -97,25 +109,31 @@ const BOXES = (function () {
     elapsed += dt;
 
     if (opening) {
-      progress += dt / OPEN_TIME;
+      progress += dt / opening.openTime;
       if (progress >= 1) {
         const b = opening;
-        const count = 1 + Math.floor(Math.random() * 3); // 产出 1~3 个
+        const count = b.kind === 'yellow' ? 1 : 3; // 黄箱 1 件 / 棕箱固定 3 件
         for (let i = 0; i < count; i++) {
-          const item = Math.random() < 0.85 ? ITEMS.generateLoot() : ITEMS.medkit();
+          const item = b.kind === 'yellow' ? ITEMS.generateYellowLoot() : ITEMS.generateLoot();
           const ang = Math.random() * Math.PI * 2, r = Math.random() * 1.3;
           spawnDrop(item, b.x + Math.cos(ang) * r, b.z + Math.sin(ang) * r);
         }
-        b.opened = true;
-        b.respawnAt = elapsed + BOX_RESPAWN;
-        scene.remove(b.group);
+        if (b.kind === 'yellow') {
+          const i = yellowBoxes.indexOf(b);
+          if (i >= 0) yellowBoxes.splice(i, 1);
+          scene.remove(b.group);
+        } else {
+          b.opened = true;
+          b.respawnAt = elapsed + BOX_RESPAWN;
+          scene.remove(b.group);
+        }
         opening = null; progress = 0;
         Audio.open();
         HUD.prompt('箱子已开启');
       }
     }
 
-    // 开完的箱子 60s 后随机换一个出生点恢复
+    // 棕色箱：开完 60s 后随机换一个出生点恢复
     for (const b of boxes) {
       if (b.opened && elapsed >= b.respawnAt) {
         b.opened = false; b.respawnAt = 0;
@@ -123,6 +141,15 @@ const BOXES = (function () {
         b.x = p.x; b.z = p.z;
         b.group.position.set(p.x, 0, p.z);
         scene.add(b.group);
+      }
+    }
+
+    // 黄色箱：60s 未被开启即消失
+    for (let i = yellowBoxes.length - 1; i >= 0; i--) {
+      const b = yellowBoxes[i];
+      if (!b.opened && opening !== b && elapsed >= b.expireAt) {
+        scene.remove(b.group);
+        yellowBoxes.splice(i, 1);
       }
     }
 
@@ -171,5 +198,5 @@ const BOXES = (function () {
     HUD.prompt('背包已满'); return false;
   }
 
-  return { init, spawnBoxes, spawnDrop, discardBackpackItem, update, getNearestBox, startOpening, cancelOpening, isOpening, getProgress, clear };
+  return { init, spawnBoxes, spawnYellowBox, spawnDrop, discardBackpackItem, update, getNearestBox, startOpening, cancelOpening, isOpening, getProgress, clear };
 })();

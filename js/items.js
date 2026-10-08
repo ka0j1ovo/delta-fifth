@@ -10,9 +10,10 @@ const ITEMS = (function () {
     { id: 'mythic',    name: '传说', color: '#ff4545' },
   ];
 
-  // 战利品稀有度概率（普通来源 / 精英来源 各一套）
-  const NORMAL_PROBS = [0.30, 0.30, 0.30, 0.09, 0.008, 0.002];
-  const ELITE_PROBS  = [0.10, 0.10, 0.20, 0.56, 0.03, 0.01];
+  // 战利品稀有度概率（顺序对应 RARITIES：常见/普通/精良/稀有/史诗/传说）
+  const NORMAL_PROBS = [0.30, 0.30, 0.30, 0.09, 0.008, 0.002]; // 棕色地面箱
+  const YELLOW_PROBS = [0.30, 0.35, 0.30, 0.04, 0.008, 0.002]; // 黄色敌人箱
+  const ELITE_PROBS  = [0.10, 0.10, 0.20, 0.56, 0.03, 0.01];   // 精英（保留）
 
   // 各档位默认价值区间（史诗/传说逐项覆盖）
   const TIER_RANGE = {
@@ -638,6 +639,7 @@ const ITEMS = (function () {
     };
   }
   function generateLoot() { return makeLoot(NORMAL_PROBS); }
+  function generateYellowLoot() { return makeLoot(YELLOW_PROBS); }
   function generateEliteLoot() { return makeLoot(ELITE_PROBS); }
 
   function medkit() {
@@ -727,5 +729,5 @@ const ITEMS = (function () {
     return u;
   }
 
-  return { RARITIES, generateLoot, generateEliteLoot, medkit, gold, itemSprite, itemIconURL, iconTexture, catalog, tierOf };
+  return { RARITIES, generateLoot, generateYellowLoot, generateEliteLoot, medkit, gold, itemSprite, itemIconURL, iconTexture, catalog, tierOf };
 })();

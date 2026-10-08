@@ -38,7 +38,6 @@ const HUD = (function () {
     el.shopItems = $('shop-items');
     el.backpackPanel = $('backpack-panel');
     el.backpackGrid = $('backpack-grid');
-    el.bpDiscardLow = $('bp-discard-low');
     el.menuPanel = $('menu-panel');
     el.menuStats = $('menu-stats');
     el.warehouseLeft = $('warehouse-left');
@@ -128,13 +127,6 @@ const HUD = (function () {
     setHealth(100);
     refreshWeapon();
     setAction('', -1);
-
-    // 背包：一键丢弃蓝色以下（常见/普通）物品
-    el.bpDiscardLow.addEventListener('click', () => {
-      const n = INVENTORY.discardBackpackBelow(2);
-      renderBackpack();
-      toast(n ? '已丢弃 ' + n + ' 件蓝色以下物品' : '没有蓝色以下物品');
-    });
 
     // 仓库：一键丢弃蓝色以下物品（二次确认，避免误删持久物品）
     el.whDiscardLow.addEventListener('click', () => {
