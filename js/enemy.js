@@ -4,12 +4,12 @@ const ENEMIES = (function () {
   const list = [];
   let spawnPoints = [];
   let kills = 0;
-  let reinforceTimer = 0, eliteTimer = 0, nextEliteAt = 0;
+  let reinforceTimer = 0, eliteTimer = 0;
   let lastNoise = { x: 0, z: 0, t: -999 }; // 玩家最近一次开枪的位置与时间
 
   const MAX_ALIVE = 8;
   const SIGHT = 20, HEAR = 35, PATROL_RADIUS = 8, BOT_HP = 100;
-  const ELITE_INTERVAL = 90, ELITE_FIRST = 300;
+  const ELITE_INTERVAL = 60; // 每 60s 轮换一批精英（删旧刷 2 个新）
 
   function init(sc, cam, player) { scene = sc; camera = cam; playerObj = player; }
   function setSpawnPoints(p) { spawnPoints = p; }
@@ -20,7 +20,6 @@ const ENEMIES = (function () {
     kills = 0;
     reinforceTimer = 0;
     eliteTimer = 0;
-    nextEliteAt = ELITE_FIRST;
     lastNoise = { x: 0, z: 0, t: -999 };
   }
 
@@ -48,7 +47,7 @@ const ENEMIES = (function () {
   }
 
   function onKill(dead) {
-    if (dead.elite) { // 精英：掉 3 个黄箱，不计入击杀、不补刷
+    if (dead.elite) { // 精英：掉红箱，不计入击杀、不补刷
       spawnDeathDrop(dead.pos.x, dead.pos.z, true);
       return false;
     }
@@ -60,12 +59,10 @@ const ENEMIES = (function () {
     return true;
   }
 
-  // 掉落：敌人不再直接掉物品，改为掉「黄色箱子」（开启 1s，60s 未开启即消失；箱内按概率出 1 件战利品）
+  // 掉落：敌人不再直接掉物品，改为掉箱子 —— 普通掉黄箱、精英掉红箱
   function spawnDeathDrop(x, z, elite) {
     if (elite) {
-      BOXES.spawnYellowBox(x, z);
-      BOXES.spawnYellowBox(x + 0.7, z);
-      BOXES.spawnYellowBox(x - 0.7, z);
+      BOXES.spawnRedBox(x, z);
       return;
     }
     BOXES.spawnYellowBox(x, z);
@@ -93,18 +90,28 @@ const ENEMIES = (function () {
     if (best) list.push(new Enemy(best.x, best.z));
   }
 
-  function spawnElite() {
-    let best = null, bd = -Infinity;
-    for (const sp of spawnPoints) {
-      if (isOccupied(sp)) continue;
-      const dx = sp.x - playerObj.pos.x, dz = sp.z - playerObj.pos.z;
-      const d = dx * dx + dz * dz;
-      if (d > bd) { bd = d; best = sp; }
+  // 精英轮换：删去地图上原有精英，再在不同地点生成 2 个新精英；击杀精英不补刷
+  function refreshElites() {
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (list[i].elite) {
+        list[i].dispose();
+        list.splice(i, 1);
+      }
     }
-    if (best) {
+    let spawned = 0;
+    for (let k = 0; k < 2; k++) {
+      let best = null, bd = -Infinity;
+      for (const sp of spawnPoints) {
+        if (isOccupied(sp)) continue;
+        const dx = sp.x - playerObj.pos.x, dz = sp.z - playerObj.pos.z;
+        const d = dx * dx + dz * dz;
+        if (d > bd) { bd = d; best = sp; }
+      }
+      if (!best) break;
       list.push(new Enemy(best.x, best.z, true));
-      HUD.showEliteBanner();
+      spawned++;
     }
+    if (spawned > 0) HUD.showEliteBanner();
   }
 
   function isOccupied(sp) {
@@ -127,9 +134,9 @@ const ENEMIES = (function () {
     }
 
     eliteTimer += dt;
-    if (eliteTimer >= nextEliteAt) { // 游戏 5 分钟后才开始刷新精英
-      spawnElite();
-      nextEliteAt += ELITE_INTERVAL;
+    if (eliteTimer >= ELITE_INTERVAL) { // 每 60s 轮换：删旧精英 + 刷 2 个新精英
+      eliteTimer = 0;
+      refreshElites();
     }
   }
 

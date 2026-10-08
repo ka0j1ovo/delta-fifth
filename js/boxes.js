@@ -1,8 +1,8 @@
-// 地面可开箱：棕色箱（固定点位，开完 60s 后换位恢复）+ 黄色箱（敌人掉落，60s 未开启即消失）+ 掉落物 + 拾取
+// 地面可开箱：棕色箱（固定点位，开完 60s 后换位恢复）+ 敌人箱（黄=普通bot / 红=精英bot，3 分钟未开启即消失）+ 掉落物 + 拾取
 const BOXES = (function () {
   let scene = null, playerObj = null;
   const boxes = [];        // 棕色地面箱 { group, x, z, opened, respawnAt }
-  const yellowBoxes = [];  // 黄色敌人箱 { group, x, z, opened, expireAt }
+  const enemyBoxes = [];   // 敌人箱（黄/红）{ group, x, z, opened, expireAt }
   const drops = [];        // 掉落物 { group, item, x, z }
   let opening = null, progress = 0, elapsed = 0;
 
@@ -47,13 +47,16 @@ const BOXES = (function () {
     }
   }
 
-  // 黄色敌人箱：开启 1s，60s 未被开启即消失
-  function spawnYellowBox(x, z) {
-    const group = buildBoxMesh(0xf0c22e, 0xb8920f, '📦');
+  // 敌人箱：黄箱=普通bot、红箱=精英bot；开启 1s，3 分钟未被开启即消失
+  function spawnEnemyBox(x, z, kind) {
+    const red = kind === 'red';
+    const group = buildBoxMesh(red ? 0xd03232 : 0xf0c22e, red ? 0x8a1f1f : 0xb8920f, '📦');
     group.position.set(x, 0, z);
     scene.add(group);
-    yellowBoxes.push({ group, x, z, opened: false, expireAt: elapsed + YELLOW_LIFETIME, kind: 'yellow', openTime: OPEN_TIME_YELLOW });
+    enemyBoxes.push({ group, x, z, opened: false, expireAt: elapsed + YELLOW_LIFETIME, kind, openTime: OPEN_TIME_YELLOW });
   }
+  function spawnYellowBox(x, z) { spawnEnemyBox(x, z, 'yellow'); }
+  function spawnRedBox(x, z) { spawnEnemyBox(x, z, 'red'); }
 
   // 黄箱内容：沿用旧掉落倍率 —— 10% 血包 / 50% 战利品 / 40% 100 哈基币
   function rollYellowContent() {
@@ -61,11 +64,21 @@ const BOXES = (function () {
     return r < 0.1 ? ITEMS.medkit() : (r < 0.6 ? ITEMS.generateYellowLoot() : ITEMS.gold(100));
   }
 
+  // 红箱内容：精英掉落，必出精英级战利品（稀有度更高）
+  function rollRedContent() { return ITEMS.generateEliteLoot(); }
+
+  // 按箱种取内容：棕=棕表战利品 / 黄=旧倍率 / 红=精英战利品
+  function rollBoxContent(kind) {
+    if (kind === 'red') return rollRedContent();
+    if (kind === 'yellow') return rollYellowContent();
+    return ITEMS.generateLoot();
+  }
+
   function clear() {
     for (const b of boxes) scene.remove(b.group);
     boxes.length = 0;
-    for (const b of yellowBoxes) scene.remove(b.group);
-    yellowBoxes.length = 0;
+    for (const b of enemyBoxes) scene.remove(b.group);
+    enemyBoxes.length = 0;
     for (const d of drops) scene.remove(d.group);
     drops.length = 0;
     opening = null; progress = 0; elapsed = 0;
@@ -93,7 +106,7 @@ const BOXES = (function () {
   function getNearestBox() {
     if (!playerObj || !playerObj.alive) return null;
     let best = null, bd = Infinity;
-    for (const b of boxes.concat(yellowBoxes)) {
+    for (const b of boxes.concat(enemyBoxes)) {
       if (b.opened) continue;
       const dx = b.x - playerObj.pos.x, dz = b.z - playerObj.pos.z;
       const d = dx * dx + dz * dz;
@@ -118,15 +131,15 @@ const BOXES = (function () {
       progress += dt / opening.openTime;
       if (progress >= 1) {
         const b = opening;
-        const count = 1; // 棕箱 / 黄箱各掉 1 件
+        const count = 1; // 每种箱子各掉 1 件
         for (let i = 0; i < count; i++) {
-          const item = b.kind === 'yellow' ? rollYellowContent() : ITEMS.generateLoot();
+          const item = rollBoxContent(b.kind);
           const ang = Math.random() * Math.PI * 2, r = Math.random() * 1.3;
           spawnDrop(item, b.x + Math.cos(ang) * r, b.z + Math.sin(ang) * r);
         }
-        if (b.kind === 'yellow') {
-          const i = yellowBoxes.indexOf(b);
-          if (i >= 0) yellowBoxes.splice(i, 1);
+        if (b.kind === 'yellow' || b.kind === 'red') {
+          const i = enemyBoxes.indexOf(b);
+          if (i >= 0) enemyBoxes.splice(i, 1);
           scene.remove(b.group);
         } else {
           b.opened = true;
@@ -150,12 +163,12 @@ const BOXES = (function () {
       }
     }
 
-    // 黄色箱：60s 未被开启即消失
-    for (let i = yellowBoxes.length - 1; i >= 0; i--) {
-      const b = yellowBoxes[i];
+    // 敌人箱（黄/红）：3 分钟未被开启即消失
+    for (let i = enemyBoxes.length - 1; i >= 0; i--) {
+      const b = enemyBoxes[i];
       if (!b.opened && opening !== b && elapsed >= b.expireAt) {
         scene.remove(b.group);
-        yellowBoxes.splice(i, 1);
+        enemyBoxes.splice(i, 1);
       }
     }
 
@@ -204,5 +217,5 @@ const BOXES = (function () {
     HUD.prompt('背包已满'); return false;
   }
 
-  return { init, spawnBoxes, spawnYellowBox, spawnDrop, discardBackpackItem, update, getNearestBox, startOpening, cancelOpening, isOpening, getProgress, clear };
+  return { init, spawnBoxes, spawnYellowBox, spawnRedBox, spawnDrop, discardBackpackItem, update, getNearestBox, startOpening, cancelOpening, isOpening, getProgress, clear };
 })();
