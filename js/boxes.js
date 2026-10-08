@@ -100,8 +100,15 @@ const BOXES = (function () {
     drops.push({ group, item, x, z, expireAt: elapsed + DROP_LIFETIME });
   }
 
-  // 从背包拖出丢弃：直接删除，不生成地面掉落物
-  function discardBackpackItem(i) { INVENTORY.removeFromBackpack(i); }
+  // 从背包拖出丢弃：金/红品质（史诗/传说）掉在地上 1 分钟后消失，其余品质直接删除
+  function discardBackpackItem(i) {
+    const item = INVENTORY.backpackItems()[i];
+    if (item && (item.rarityId === 'legendary' || item.rarityId === 'mythic') && playerObj) {
+      const ang = Math.random() * Math.PI * 2;
+      spawnDrop(item, playerObj.pos.x + Math.cos(ang) * 2, playerObj.pos.z + Math.sin(ang) * 2);
+    }
+    INVENTORY.removeFromBackpack(i);
+  }
 
   function getNearestBox() {
     if (!playerObj || !playerObj.alive) return null;
