@@ -10,7 +10,6 @@ const ENEMIES = (function () {
   const MAX_ALIVE = 8;
   const SIGHT = 20, HEAR = 35, PATROL_RADIUS = 8, BOT_HP = 100;
   const ELITE_INTERVAL = 90, ELITE_FIRST = 300;
-  const DEATH_DISAPPEAR = 180; // 击杀后尸体保留 3 分钟才消失
 
   function init(sc, cam, player) { scene = sc; camera = cam; playerObj = player; }
   function setSpawnPoints(p) { spawnPoints = p; }
@@ -152,7 +151,6 @@ const ENEMIES = (function () {
       this.strafeTimer = 0;
       this.lastKnown = null;
       this.deathTimer = 0;
-      this.deathAnim = 0;
       this.footstepTimer = 0;
       this.buildMesh();
     }
@@ -208,8 +206,7 @@ const ENEMIES = (function () {
       this.hp -= dmg;
       if (this.hp <= 0) {
         this.alive = false;
-        this.deathTimer = DEATH_DISAPPEAR;
-        this.deathAnim = 1.3;
+        this.deathTimer = 1.3;
         this.group.rotation.x = -Math.PI / 2;
         return true;
       }
@@ -221,13 +218,9 @@ const ENEMIES = (function () {
 
     update(dt, now) {
       if (!this.alive) {
-        // 倒下后短暂下沉，随后尸体保留 3 分钟再消失
-        if (this.deathAnim > 0) {
-          this.deathAnim -= dt;
-          this.group.position.y -= dt * 0.5;
-        }
         if (this.deathTimer > 0) {
           this.deathTimer -= dt;
+          this.group.position.y -= dt * 0.5;
           if (this.deathTimer <= 0) this.group.visible = false;
         }
         return;

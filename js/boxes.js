@@ -8,7 +8,7 @@ const BOXES = (function () {
 
   const OPEN_TIME_BROWN = 1.0, OPEN_TIME_YELLOW = 1.0;
   const OPEN_RANGE = 3, PICK_RANGE = 1.5;
-  const BOX_RESPAWN = 60, DROP_LIFETIME = 60, YELLOW_LIFETIME = 60;
+  const BOX_RESPAWN = 60, DROP_LIFETIME = 60, YELLOW_LIFETIME = 180;
 
   const BOX_POSITIONS = [
     { x: -16, z: -8 }, { x: 16, z: -8 }, { x: -16, z: 12 }, { x: 16, z: 12 }, { x: 0, z: -20 },
