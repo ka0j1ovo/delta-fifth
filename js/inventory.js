@@ -1,6 +1,7 @@
-// 库存：背包(9格)、保险箱(0-4格)、仓库(珍贵展示柜3×3最多9格 + 普通仓库最多400格=10页×40)、局内金币 / 元点数、localStorage 统计
+// 库存：背包(9格)、保险箱(0-4格)、仓库(珍贵展示柜3×3最多9格 + 普通仓库最多400格=10页×40)、局内哈基币 / 元点数、localStorage 统计
 const INVENTORY = (function () {
-  const BACKPACK_SIZE = 9;
+  const BACKPACK_SIZE = 9;       // 默认/基准（买票进入）
+  const BACKPACK_MAX = 15;       // 上限：买票 9 + 重甲 6
   const SAFE_MAX = 4;            // 保险箱最多 4 格
   const SAFE_UNLOCK_COST = 10000; // 累计消费点数每满 10000 自动解锁 1 格
   const PRECIOUS_MAX = 9;     // 珍贵展示柜：3×3 最多 9 格（开局 1 格）
@@ -12,6 +13,9 @@ const INVENTORY = (function () {
   const PRECIOUS_SLOT_PRICE = 5000;
   const WAREHOUSE_SLOT_PRICE = 500;
   const KEY = 'sdfc_stats_v1';
+
+  // 物品改名迁移表：旧名 → 新名（兼容历史存档，避免仓库/图鉴出现旧名）
+  const NAME_RENAMES = { '金色硬币': '金币', '金条': '金砖', '银砖条': '银锭' };
 
   // 珍贵展示柜皮肤（20 款，价格/风格自行设计）
   const SKINS = [
@@ -38,12 +42,13 @@ const INVENTORY = (function () {
   ];
 
   let backpack = new Array(BACKPACK_SIZE).fill(null);
+  let backpackSize = BACKPACK_SIZE;   // 当前局背包格数（eco 6 / 买票 9 + 护甲加成）
   let safeBox = new Array(0).fill(null); // 每局重置，容量 = 当前保险箱格数
-  let gold = 0;                 // 局内金币（购买武器），每局重置、不持久
+  let gold = 0;                 // 局内哈基币（购买武器），每局重置、不持久
   let stats = load();
 
   function isPrecious(item) {
-    return item && (item.rarityId === 'epic' || item.rarityId === 'legend');
+    return item && (item.rarityId === 'legendary' || item.rarityId === 'mythic');
   }
 
   function defaults() {
@@ -57,6 +62,7 @@ const INVENTORY = (function () {
       preciousSkin: 'default',
       ownedSkins: ['default'],
       warehouse: new Array(WAREHOUSE_SIZE).fill(null),
+      codex: {}, // 图鉴：物品名 -> 首次带出时间戳
     };
   }
 
@@ -68,7 +74,7 @@ const INVENTORY = (function () {
 
   function normalizeStats(s) {
     const base = Object.assign(defaults(), s || {});
-    // 兼容「统一货币」期间的存档：金币(gold) → 点数(points)
+    // 兼容「统一货币」期间的存档：哈基币(gold) → 点数(points)
     if (typeof base.gold === 'number' && typeof base.points !== 'number') base.points = base.gold;
     delete base.gold;
     base.totalRuns = clampInt(base.totalRuns, 0, Number.MAX_SAFE_INTEGER, 0);
@@ -80,6 +86,12 @@ const INVENTORY = (function () {
     base.preciousSlots = clampInt(base.preciousSlots, INIT_PRECIOUS, PRECIOUS_MAX, INIT_PRECIOUS);
     base.warehouseSlots = clampInt(base.warehouseSlots, INIT_WAREHOUSE, WAREHOUSE_MAX, INIT_WAREHOUSE);
     base.warehouse = normalizeWarehouse(base.warehouse);
+    base.codex = (base.codex && typeof base.codex === 'object' && !Array.isArray(base.codex)) ? base.codex : {};
+    // 图鉴键也做改名迁移（旧名 → 新名）
+    for (const k of Object.keys(base.codex)) {
+      const nk = NAME_RENAMES[k];
+      if (nk && nk !== k) { if (base.codex[nk] == null) base.codex[nk] = base.codex[k]; delete base.codex[k]; }
+    }
 
     // 已解锁格数至少要覆盖已有物品（兼容旧存档 / 手改存档）
     let needPrecious = 0, needWh = 0;
@@ -116,11 +128,11 @@ const INVENTORY = (function () {
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(stats)); } catch (e) {} }
 
-  // 磨损：0-1 五位小数；越小越新、品质越好
+  // 崭新度：0-1 五位小数；越大越新（1 = 崭新，0 = 完全磨损）
   function rollWear() { return Math.floor(Math.random() * 100000) / 100000; }
   function wearOpacity(item) {
     const w = (typeof item.wear === 'number' && Number.isFinite(item.wear)) ? Math.min(1, Math.max(0, item.wear)) : 0;
-    return (1 - w) * 0.5 + 0.5;
+    return 0.2 + w * 0.8; // 崭新(w=1)→100%，完全磨损(w=0)→20%
   }
   // 物品进入仓库：记录带出的北京时间 + 随机磨损
   function stampItem(item) {
@@ -138,7 +150,7 @@ const INVENTORY = (function () {
     let li = 0, ri = 0;
     for (const w of raw) {
       if (!w || typeof w !== 'object' || typeof w.name !== 'string') continue;
-      const item = { name: w.name, rarityId: w.rarityId, rarityName: w.rarityName, color: w.color, value: w.value, kind: w.kind };
+      const item = { name: NAME_RENAMES[w.name] || w.name, rarityId: w.rarityId, rarityName: w.rarityName, color: w.color, value: w.value, kind: w.kind };
       if (typeof w.foundAt === 'number') item.foundAt = w.foundAt;
       if (typeof w.wear === 'number') item.wear = w.wear;
       const qty = Math.max(1, Math.floor(Number(w.qty)) || 1);
@@ -155,21 +167,23 @@ const INVENTORY = (function () {
     return out;
   }
 
-  function newRun() {
-    backpack = new Array(BACKPACK_SIZE).fill(null);
+  function newRun(size) {
+    backpackSize = clampInt(size, 1, BACKPACK_MAX, BACKPACK_SIZE);
+    backpack = new Array(backpackSize).fill(null);
     safeBox = new Array(safeSlots()).fill(null);
     gold = 0;
   }
+  function getBackpackSize() { return backpackSize; }
 
   // —— 背包（9 格，不堆叠）——
   function backpackCount() { return backpack.filter(Boolean).length; }
-  function isBackpackFull() { return backpackCount() >= BACKPACK_SIZE; }
+  function isBackpackFull() { return backpackCount() >= backpackSize; }
   function addToBackpack(item) {
     const i = backpack.indexOf(null);
     if (i < 0) return false;
     backpack[i] = item; return true;
   }
-  function removeFromBackpack(i) { if (i >= 0 && i < BACKPACK_SIZE) backpack[i] = null; }
+  function removeFromBackpack(i) { if (i >= 0 && i < backpackSize) backpack[i] = null; }
   function consumeMedkit() {
     const i = backpack.findIndex(it => it && it.kind === 'medkit');
     if (i < 0) return false;
@@ -177,9 +191,9 @@ const INVENTORY = (function () {
     return true;
   }
   function backpackItems() { return backpack.slice(); }
-  function clearBackpack() { backpack = new Array(BACKPACK_SIZE).fill(null); }
+  function clearBackpack() { backpack = new Array(backpackSize).fill(null); }
 
-  // —— 局内金币（不持久，购买武器 / 拾取）——
+  // —— 局内哈基币（不持久，购买武器 / 拾取）——
   function addGold(n) { gold += Math.floor(Number(n)) || 0; }
   function spendGold(n) {
     n = Math.floor(Number(n));
@@ -215,10 +229,33 @@ const INVENTORY = (function () {
     if (String(code || '').trim().toLowerCase() === redeemSecret()) {
       stats.cracked = true;
       stats = normalizeStats(stats);
+      fillCrackedCollection();
       save();
       return true;
     }
     return false;
+  }
+
+  // 破解版：把全部传说/史诗物品铺满展示柜 + 仓库（崭新 1.0，价值取上限；幂等，已存在则跳过）
+  function fillCrackedCollection() {
+    const precious = ITEMS.catalog()
+      .filter(c => c.rarityId === 'legendary' || c.rarityId === 'mythic')
+      .sort((a, b) => {
+        const ra = a.rarityId === 'mythic' ? 0 : 1;   // 传说优先进展示柜
+        const rb = b.rarityId === 'mythic' ? 0 : 1;
+        if (ra !== rb) return ra - rb;
+        return (b.max || 0) - (a.max || 0);           // 同档按价值从高到低
+      });
+    const existing = new Set();
+    for (const it of stats.warehouse) if (it && typeof it.name === 'string') existing.add(it.name);
+    for (const c of precious) {
+      if (existing.has(c.name)) continue;
+      placeItem({
+        kind: 'loot', name: c.name,
+        rarityId: c.rarityId, rarityName: c.rarityName, color: c.color,
+        wear: 1.0, value: c.max || 0,
+      });
+    }
   }
   function isCracked() { return !!stats.cracked; }
   function moveBackpackToSafe(bpi, sbi) {
@@ -231,7 +268,7 @@ const INVENTORY = (function () {
     return true;
   }
   function moveSafeToBackpack(sbi, bpi) {
-    if (sbi < 0 || sbi >= safeBox.length || bpi < 0 || bpi >= BACKPACK_SIZE) return false;
+    if (sbi < 0 || sbi >= safeBox.length || bpi < 0 || bpi >= backpackSize) return false;
     const item = safeBox[sbi];
     if (!item) return false;
     const target = backpack[bpi];
@@ -263,6 +300,11 @@ const INVENTORY = (function () {
   }
   function placeItem(item) {
     stampItem(item); // 进入仓库：记录带出时间 + 随机磨损
+    // 图鉴：记录首次带出时间（含保险箱带出，depositSafeBox 也走这里）
+    if (item && typeof item.name === 'string') {
+      const ts = item.foundAt || Date.now();
+      if (stats.codex[item.name] == null) stats.codex[item.name] = ts;
+    }
     const pFrom = 0, pTo = stats.preciousSlots;
     const wFrom = PRECIOUS_MAX, wTo = PRECIOUS_MAX + stats.warehouseSlots;
     if (isPrecious(item)) {
@@ -292,6 +334,52 @@ const INVENTORY = (function () {
     return { value, overflowed, overflowValue };
   }
 
+  // —— 付费撤离：按品质低→高挑选价值 fee 的物品从背包删除，超出部分转为点数 ——
+  function payExtractionFee(fee) {
+    fee = Math.floor(Number(fee));
+    if (!Number.isFinite(fee) || fee <= 0) return { points: 0, removed: 0 };
+    const ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+    const rank = (it) => { const i = ORDER.indexOf(it && it.rarityId); return i < 0 ? 99 : i; };
+    const entries = [];
+    for (let i = 0; i < backpack.length; i++) if (backpack[i]) entries.push({ it: backpack[i], i });
+    entries.sort((a, b) => {
+      const ra = rank(a.it) - rank(b.it);
+      if (ra !== 0) return ra;
+      return (a.it.value || 0) - (b.it.value || 0);
+    });
+    let acc = 0, removed = [];
+    for (const e of entries) {
+      if (acc >= fee) break;
+      acc += e.it.value || 0;
+      removed.push(e.i);
+    }
+    if (acc < fee) return null; // 背包价值不足，无法支付撤离费
+    for (const i of removed) backpack[i] = null;
+    const points = acc - fee;
+    if (points > 0) stats.points += points;
+    save();
+    return { points, removed: removed.length };
+  }
+
+  // —— 一键丢弃：蓝色（精良）以下的战利品直接删除，不折点 ——
+  function discardBackpackBelow(tier) {
+    let n = 0;
+    for (let i = 0; i < backpack.length; i++) {
+      const it = backpack[i];
+      if (it && it.kind === 'loot' && ITEMS.tierOf(it.rarityId) < tier) { backpack[i] = null; n++; }
+    }
+    return n;
+  }
+  function discardWarehouseBelow(tier) {
+    let n = 0;
+    for (let i = 0; i < WAREHOUSE_SIZE; i++) {
+      const it = stats.warehouse[i];
+      if (it && it.kind === 'loot' && ITEMS.tierOf(it.rarityId) < tier) { stats.warehouse[i] = null; n++; }
+    }
+    if (n) save();
+    return n;
+  }
+
   function getStats() { return stats; }
   function surviveRate() { return stats.totalRuns ? Math.round(stats.survivedRuns / stats.totalRuns * 100) : 0; }
 
@@ -305,6 +393,23 @@ const INVENTORY = (function () {
     stats.points += g;
     save();
     return { item: it, points: g };
+  }
+
+  // 批量售出：多选后一次性折算点数（只卖有效格，一次存档）
+  function sellItems(indices) {
+    let count = 0, points = 0;
+    for (const i of indices) {
+      if (i < 0 || i >= WAREHOUSE_SIZE) continue;
+      const it = stats.warehouse[i];
+      if (!it) continue;
+      stats.warehouse[i] = null;
+      const g = clampInt(it.value, 0, Number.MAX_SAFE_INTEGER, 0);
+      stats.points += g;
+      points += g;
+      count++;
+    }
+    if (count) save();
+    return count ? { count, points } : null;
   }
 
   function buyPreciousSlot() {
@@ -363,11 +468,11 @@ const INVENTORY = (function () {
   function clearSave() { stats = normalizeStats(null); save(); }
 
   return {
-    newRun, backpackCount, isBackpackFull, addToBackpack, removeFromBackpack, consumeMedkit, backpackItems, clearBackpack,
+    newRun, backpackCount, isBackpackFull, addToBackpack, removeFromBackpack, consumeMedkit, backpackItems, clearBackpack, getBackpackSize,
     addGold, spendGold, getGold, getPoints, spendPoints,
     safeSlots, safeBoxItems, moveBackpackToSafe, moveSafeToBackpack, depositSafeBox,
     enterCode, isCracked,
-    recordKill, finishRun, depositBackpack, getStats, surviveRate, swapSlots, sellItem,
+    recordKill, finishRun, depositBackpack, payExtractionFee, discardBackpackBelow, discardWarehouseBelow, getStats, surviveRate, swapSlots, sellItem, sellItems,
     buyPreciousSlot, buyWarehouseSlot, buySkin, applySkin, getSkins,
     wearOpacity,
     exportData, importData, clearSave,

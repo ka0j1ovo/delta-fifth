@@ -4,6 +4,7 @@ const MAIN = (function () {
   let state = 'menu';
   let time = 0, timeLeft = 600, menuT = 0;
   let pendingEnd = null;
+  let bannerShown = {};
 
   const RUN_TIME = 600, START_BOTS = 4;
 
@@ -64,14 +65,25 @@ const MAIN = (function () {
     HUD.setBackpackPanel(false);
   }
 
+  function enterFullscreen() {
+    const el = document.documentElement;
+    if (document.fullscreenElement) return;
+    try {
+      if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    } catch (e) {}
+  }
+
   function startRun(loadout) {
-    loadout = loadout || { maxHp: 50, cost: 0, weapons: [], medkit: false };
+    loadout = loadout || { maxHp: 50, cost: 0, weapons: [], medkit: false, backpackSize: 6 };
     if (!INVENTORY.spendPoints(loadout.cost)) { HUD.prompt('点数不足'); return false; }
     state = 'playing';
     pendingEnd = null;
+    enterFullscreen();
     timeLeft = RUN_TIME;
+    bannerShown = {};
     Audio.resetStreak();
-    INVENTORY.newRun();
+    INVENTORY.newRun(loadout.backpackSize);
     WEAPONS.resetForRun();
     const weapons = loadout.weapons || [];
     for (const wi of weapons) WEAPONS.own(wi);
@@ -152,6 +164,14 @@ const MAIN = (function () {
       if (!pendingEnd) {
         timeLeft -= dt;
         HUD.setTime(Math.ceil(timeLeft));
+        const elapsed = RUN_TIME - timeLeft;
+
+        // 撤离阶段横幅：60s 付费 / 90s 免费 / 7 分钟提示 / 8 分钟付费
+        if (elapsed >= 60 && !bannerShown.paid1) { bannerShown.paid1 = true; HUD.showPhaseBanner('🚁 开始付费撤离（需 500 哈基币）', 30); }
+        if (elapsed >= 90 && !bannerShown.free) { bannerShown.free = true; HUD.showPhaseBanner('✅ 无条件撤离', 0); }
+        if (elapsed >= 420 && !bannerShown.warn) { bannerShown.warn = true; HUD.showPhaseBanner('⚠️ 无条件撤离即将结束', 60); }
+        if (elapsed >= 480 && !bannerShown.paid2) { bannerShown.paid2 = true; HUD.showPhaseBanner('🚁 开始付费撤离（需 500 哈基币）', 120); }
+        HUD.tickPhaseBanner(dt);
 
         Player.update(dt);
         ENEMIES.update(dt);
@@ -160,10 +180,13 @@ const MAIN = (function () {
         BOXES.update(dt);
         Effects.update(dt);
 
-        const ex = EXTRACT.update(dt);
+        const ex = EXTRACT.update(dt, elapsed);
         if (ex === 'done') requestEnd(true, 'extract');
-        else if (!Player.alive) requestEnd(false, 'death');
-        else if (timeLeft <= 0) requestEnd(false, 'timeout');
+        else {
+          if (ex === 'insufficient') HUD.prompt('撤离需 500 哈基币 · 背包价值不足');
+          if (!Player.alive) requestEnd(false, 'death');
+          else if (timeLeft <= 0) requestEnd(false, 'timeout');
+        }
 
         const vm = WEAPONS.viewmodel();
         if (vm) {
@@ -187,7 +210,13 @@ const MAIN = (function () {
         else if (BOXES.getNearestBox()) interact = '按住 F 开箱';
         HUD.setInteract(interact);
 
-        if (EXTRACT.isInZone()) HUD.setAction('撤离中… 请勿离开区域', EXTRACT.getProgress());
+        if (EXTRACT.isInZone()) {
+          const ph = EXTRACT.phase(elapsed);
+          const label = ph === 'locked' ? '撤离未开放 · 开局 60s 后开放'
+            : ph === 'paid' ? '付费撤离中… 需 500 哈基币'
+            : '撤离中… 请勿离开区域';
+          HUD.setAction(label, EXTRACT.getProgress());
+        }
         else if (BOXES.isOpening()) HUD.setAction('开箱中…', BOXES.getProgress());
         else HUD.setAction('', -1);
       } else {

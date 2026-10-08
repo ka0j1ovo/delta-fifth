@@ -36,7 +36,7 @@ const ENEMIES = (function () {
 
   function getMeshes() {
     const out = [];
-    for (const e of list) if (e.alive) out.push(e.body, e.head, e.gun);
+    for (const e of list) if (e.alive) out.push(e.body, e.neck, e.head, e.gun);
     return out;
   }
 
@@ -60,15 +60,19 @@ const ENEMIES = (function () {
     return true;
   }
 
-  // 掉落：普通 10% 血包 / 50% 随机战利品 / 40% 100 金币；精英必掉高稀有度随机战利品
+  // 掉落：普通 10% 血包 / 50% 随机战利品 / 40% 100 哈基币；精英 = 1 个稀有度更好的战利品 + 2 个普通战利品
+  function rollNormalDrop() {
+    const r = Math.random();
+    return r < 0.1 ? ITEMS.medkit() : (r < 0.6 ? ITEMS.generateLoot() : ITEMS.gold(100));
+  }
   function spawnDeathDrop(x, z, elite) {
-    let item;
-    if (elite) item = ITEMS.generateEliteLoot();
-    else {
-      const r = Math.random();
-      item = r < 0.1 ? ITEMS.medkit() : (r < 0.6 ? ITEMS.generateLoot() : ITEMS.gold(100));
+    if (elite) {
+      BOXES.spawnDrop(ITEMS.generateEliteLoot(), x, z);
+      BOXES.spawnDrop(rollNormalDrop(), x + 0.7, z);
+      BOXES.spawnDrop(rollNormalDrop(), x - 0.7, z);
+      return;
     }
-    BOXES.spawnDrop(item, x, z);
+    BOXES.spawnDrop(rollNormalDrop(), x, z);
   }
 
   function respawnAtFarthest() {
@@ -162,14 +166,20 @@ const ENEMIES = (function () {
       const gunMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5 });
       const edgeMat = new THREE.LineBasicMaterial({ color: 0x000000 });
 
-      this.body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 0.32), bodyMat);
+      // 命中盒稍放大，并新增「脖子」mesh 补齐身体与头部之间的虚空（命中按身体计）
+      this.body = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.84, 0.36), bodyMat);
       this.body.position.y = 0.9;
       this.body.castShadow = true;
       this.body.userData = { type: 'body', enemy: this };
       this.body.add(new THREE.LineSegments(new THREE.EdgesGeometry(this.body.geometry), edgeMat));
 
-      this.head = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.28, 0.28), headMat);
-      this.head.position.y = 1.55;
+      this.neck = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.1, 0.28), bodyMat);
+      this.neck.position.y = 1.37;
+      this.neck.userData = { type: 'body', enemy: this };
+      this.neck.add(new THREE.LineSegments(new THREE.EdgesGeometry(this.neck.geometry), edgeMat));
+
+      this.head = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.32, 0.34), headMat);
+      this.head.position.y = 1.58;
       this.head.castShadow = true;
       this.head.userData = { type: 'head', enemy: this };
       this.head.add(new THREE.LineSegments(new THREE.EdgesGeometry(this.head.geometry), edgeMat));
@@ -178,7 +188,7 @@ const ENEMIES = (function () {
       this.gun.position.set(0.28, 0.95, 0.15);
       this.gun.userData = { type: 'body', enemy: this };
 
-      this.group.add(this.body, this.head, this.gun);
+      this.group.add(this.body, this.neck, this.head, this.gun);
       if (this.elite) {
         this.group.scale.setScalar(1.5); // 体积更大 50%
         const shield = MAP.sprite('🛡️', 0.8); shield.position.set(0, 1.1, 0.55);
@@ -261,13 +271,13 @@ const ENEMIES = (function () {
 
         const strafeScale = dist < 8 ? 0.5 : 1.0; // 接近玩家时横向随机移动减半
         if (hasLOS && dist > 4) {
-          moveDir = this.navigate(toT).addScaledVector(strafe, 0.4 * strafeScale);
+          moveDir = this.navigate(toT).addScaledVector(strafe, 0.2 * strafeScale);
         } else if (dist > 2.5) {
-          moveDir = this.navigate(toT).addScaledVector(strafe, 0.5 * strafeScale);
+          moveDir = this.navigate(toT).addScaledVector(strafe, 0.25 * strafeScale);
         } else {
           // 贴脸：横向移动随距离进一步减小，避免贴脸左右横跳
           const closeScale = Math.max(0.06, (dist / 2.5) * 0.25);
-          moveDir = strafe.clone().multiplyScalar(closeScale);
+          moveDir = strafe.clone().multiplyScalar(closeScale * 0.5);
         }
         this.move(moveDir.normalize(), dt * 1.0);
       } else {

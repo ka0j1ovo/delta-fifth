@@ -6,7 +6,7 @@ const BOXES = (function () {
   let opening = null, progress = 0, elapsed = 0;
 
   const OPEN_TIME = 1.0, OPEN_RANGE = 3, PICK_RANGE = 1.5;
-  const BOX_RESPAWN = 60;
+  const BOX_RESPAWN = 60, DROP_LIFETIME = 60;
 
   const BOX_POSITIONS = [
     { x: -16, z: -8 }, { x: 16, z: -8 }, { x: -16, z: 12 }, { x: 16, z: 12 }, { x: 0, z: -20 },
@@ -66,7 +66,7 @@ const BOXES = (function () {
     group.add(cube, spr);
     group.position.set(x, 0, z);
     scene.add(group);
-    drops.push({ group, item, x, z });
+    drops.push({ group, item, x, z, expireAt: elapsed + DROP_LIFETIME });
   }
 
   // 从背包拖出丢弃：直接删除，不生成地面掉落物
@@ -126,9 +126,14 @@ const BOXES = (function () {
       }
     }
 
-    // 掉落物：走近拾取
+    // 掉落物：60 秒未被拾取则消失；走近拾取
     for (let i = drops.length - 1; i >= 0; i--) {
       const d = drops[i];
+      if (elapsed >= d.expireAt) {
+        scene.remove(d.group);
+        drops.splice(i, 1);
+        continue;
+      }
       if (!playerObj || !playerObj.alive) continue;
       const dx = d.x - playerObj.pos.x, dz = d.z - playerObj.pos.z;
       if (dx * dx + dz * dz <= PICK_RANGE * PICK_RANGE) {

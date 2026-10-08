@@ -2,7 +2,7 @@
 const EXTRACT = (function () {
   let scene = null, playerObj = null;
   const pos = { x: 0, z: 0 };
-  const RADIUS = 3.5, TIME = 10;
+  const RADIUS = 3.5, TIME = 10, PAID_FEE = 500;
   let progress = 0, inZone = false, sprite = null, bob = 0;
 
   function init(sc, player) {
@@ -36,12 +36,30 @@ const EXTRACT = (function () {
 
   function reset() { progress = 0; inZone = false; }
 
-  // 返回 'done' 表示撤离完成
-  function update(dt) {
+  // 撤离阶段：开局 60s 内无法撤离；60-90s 付费(500)；90-480s 免费；480s 后付费(500)
+  function phase(elapsed) {
+    if (elapsed < 60) return 'locked';
+    if (elapsed < 90) return 'paid';
+    if (elapsed < 480) return 'free';
+    return 'paid';
+  }
+
+  // 返回 'done' 表示撤离完成；'insufficient' 表示付费撤离背包价值不足
+  function update(dt, elapsed) {
     inZone = inRadius();
-    if (inZone) {
+    const ph = phase(elapsed || 0);
+    if (ph === 'locked') {
+      progress = 0;
+    } else if (inZone) {
       progress += dt / TIME;
-      if (progress >= 1) { progress = 1; return 'done'; }
+      if (progress >= 1) {
+        progress = 1;
+        if (ph === 'paid') {
+          const pay = INVENTORY.payExtractionFee(PAID_FEE);
+          if (!pay) { progress = 0; return 'insufficient'; }
+        }
+        return 'done';
+      }
     } else {
       progress = 0;
     }
@@ -53,5 +71,5 @@ const EXTRACT = (function () {
   function getProgress() { return progress; }
   function isInZone() { return inZone; }
 
-  return { init, update, reset, getProgress, isInZone, pos, RADIUS, TIME };
+  return { init, update, reset, getProgress, isInZone, phase, pos, RADIUS, TIME, PAID_FEE };
 })();

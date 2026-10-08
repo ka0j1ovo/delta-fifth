@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>搜打撤 · 撤离射击</title>
+<title>Delta Fifth（四角洲不动）· 撤离射击</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -31,7 +31,7 @@
 
       <!-- 弹药 -->
       <div id="ammo-panel">
-        <div id="weapon-name">经典 Classic</div>
+        <div id="weapon-name">标配 Classic</div>
         <div id="ammo-text">12 / 36</div>
       </div>
 
@@ -44,10 +44,12 @@
         <span id="reload-text">0.0</span>
       </div>
 
-      <!-- 顶部信息：击杀 / 倒计时 / 金币 / 背包 -->
+      <!-- 顶部信息：击杀 / 倒计时 / 哈基币 / 背包 -->
       <div id="top-bar">
-        <div id="kill-count">击杀 0</div>
-        <div id="time-text">10:00</div>
+        <div class="top-left">
+          <div id="time-text">10:00</div>
+          <div id="kill-count">击杀 0</div>
+        </div>
         <div class="top-right">
           <div id="gold-text">💰 0</div>
           <div id="backpack-count">背包 0/9</div>
@@ -72,6 +74,9 @@
       <!-- 精英刷新横幅 -->
       <div id="elite-banner">精英 bot 刷新</div>
 
+      <!-- 撤离阶段横幅 -->
+      <div id="phase-banner"><span id="phase-banner-text"></span><span id="phase-banner-time"></span></div>
+
       <!-- 武器商店面板 -->
       <div id="shop-panel">
         <div id="shop-items"></div>
@@ -79,13 +84,18 @@
 
       <!-- Tab 背包面板 -->
       <div id="backpack-panel">
-        <div class="bp-title">🎒 背包 <span id="bp-gold" class="bp-gold">💰 金币 0</span></div>
-        <div id="backpack-grid"></div>
-        <div class="sb-section">
-          <div class="sb-subtitle" id="sb-subtitle">🔒 保险箱（0/4）</div>
-          <div id="safebox-grid"></div>
+        <div class="bp-title">🎒 背包 <span id="bp-gold" class="bp-gold">💰 哈基币 0</span></div>
+        <div class="bp-main">
+          <div class="bp-left">
+            <div id="backpack-grid"></div>
+            <button id="bp-discard-low" title="丢弃常见/普通品质物品">🗑️ 丢弃蓝色以下</button>
+          </div>
+          <div class="sb-section">
+            <div class="sb-subtitle" id="sb-subtitle">🔒 保险箱（0/4）</div>
+            <div id="safebox-grid"></div>
+          </div>
         </div>
-        <div id="bp-discard">🗑️ 拖到这里丢弃（直接删除）</div>
+        <div class="bp-hint">💡 把物品拖出面板外即可丢弃</div>
       </div>
 
       <!-- 受伤闪屏 -->
@@ -99,7 +109,7 @@
     <div id="menu-panel">
       <div class="menu-box">
         <div class="menu-head">
-          <h1>搜打撤</h1>
+          <h1>Delta Fifth（四角洲不动）</h1>
           <div class="menu-sub">搜刮 · 战斗 · 撤离</div>
         </div>
         <div class="menu-body">
@@ -110,6 +120,7 @@
             <button id="open-shop-btn">🏪 仓库商店</button>
             <div class="menu-btns-row">
               <button id="tutorial-btn">📖 新手教程</button>
+              <button id="codex-btn">📓 图鉴</button>
               <button id="redeem-btn">🎁 兑换码</button>
             </div>
             <div id="save-actions">
@@ -128,6 +139,10 @@
               </div>
               <div class="wh-col">
                 <div class="wh-label">仓库</div>
+                <div class="wh-tools">
+                  <button id="wh-sell-selected" hidden>售出选中</button>
+                  <button id="wh-discard-low" title="丢弃常见/普通品质物品">🗑️ 丢弃蓝色以下</button>
+                </div>
                 <div id="warehouse-right"></div>
               </div>
             </div>
@@ -171,8 +186,16 @@
           <div id="lo-entries"></div>
         </div>
         <div class="lo-section">
-          <div class="lo-section-title">可选装备</div>
-          <div id="lo-addons"></div>
+          <div class="lo-section-title">护甲（可选）</div>
+          <div id="lo-armor" class="lo-grid"></div>
+        </div>
+        <div class="lo-section">
+          <div class="lo-section-title">开局携带装备（可选）</div>
+          <div id="lo-equip" class="lo-grid"></div>
+        </div>
+        <div class="lo-section">
+          <div class="lo-section-title">武器（可选）</div>
+          <div id="lo-weapons" class="lo-grid"></div>
         </div>
         <div id="lo-summary"></div>
         <div class="lo-btns">
@@ -182,11 +205,11 @@
       </div>
     </div>
 
-    <!-- 监视详情页（珍贵展示柜物品放大至全屏） -->
+    <!-- 检视详情页（珍贵展示柜物品放大至全屏） -->
     <div id="item-detail">
       <div class="detail-box">
         <div class="detail-head">
-          <div class="detail-title">🔍 监视</div>
+          <div class="detail-title">🔍 检视</div>
           <button id="detail-close-btn" title="关闭">✕</button>
         </div>
         <div id="detail-body"></div>
@@ -203,12 +226,14 @@
         <div class="tut-body">
           <h3>🎯 目标：搜刮 → 战斗 → 撤离</h3>
           <p>进图搜刮物资塞满 9 格背包，走到地图中心撤离点站 10 秒带出。撤离成功则背包物品存入仓库；死亡则本局背包全丢（保险箱内物品除外）。</p>
+          <h3>🚁 撤离时间线（10 分钟）</h3>
+          <p>开局 60 秒内无法撤离；60~90 秒为付费撤离（需支付 500 哈基币，不足则无法撤离）；90 秒后进入无条件免费撤离；第 7 分钟提示「即将结束」；第 8 分钟起再次付费撤离（持续 120 秒）；10 分钟耗尽仍未撤离则失败。付费撤离从背包按品质低到高删除价值 500 的物品，超出部分转为点数。</p>
           <h3>🕹️ 操作</h3>
           <p>WASD 移动 · 鼠标锁定视角 · 左键射击 · 右键开镜 · R 换弹 · 1-5 切枪 · Shift 静步 · F 开箱 · 长按 Tab 打开背包。</p>
           <h3>🚪 进入方式</h3>
-          <p>开局选择进入方式：eco 进入（50 血 · 免费）或正常进入（100 血 · 300 点）；可选购护甲（半甲 +25 血 / 全甲 +50 血）、血包、开局武器（鬼魅 / 蜂刺 / 狂徒）。</p>
-          <h3>💰 局内金币</h3>
-          <p>击杀 Bot 或开箱会掉落金币；靠近武器商店按 2/3/4/5 买枪、6 买血包。金币每局清零。</p>
+          <p>开局选择进入方式：eco 进入（50 血 · 背包 6 格 · 免费）或买票进入（100 血 · 背包 9 格 · 200 点）；可选购护甲（半甲 / 全甲 / 重甲，加血加背包格）、血包、开局武器（鬼魅 / 蜂刺 / 狂徒）。</p>
+          <h3>💰 局内哈基币</h3>
+          <p>击杀 Bot 或开箱会掉落哈基币；靠近武器商店按 2/3/4/5 买枪、6 买血包。哈基币每局清零。</p>
           <h3>🔒 保险箱</h3>
           <p>把贵重物品拖进保险箱，死亡也能带出。保险箱格子靠商店累计消费点数解锁（满 10000 点自动 +1 格，最多 4 格）。</p>
           <h3>💎 点数（元货币）</h3>
@@ -216,8 +241,19 @@
           <h3>👾 敌人</h3>
           <p>普通 Bot 巡逻 / 会听枪声来查；游戏 5 分钟后刷新精英 Bot（1000 血、掉落更好）。</p>
           <h3>✨ 品质与磨损</h3>
-          <p>物品进仓库后随机获得磨损（越小品质越好、图标越清晰）；点击珍贵展示柜物品可进入「监视」查看详情。</p>
+          <p>物品进仓库后随机获得崭新度（1.0 为崭新、0.0 为完全磨损，越新图标越清晰、价格越高）；点击珍贵展示柜物品可进入「检视」查看详情。</p>
         </div>
+      </div>
+    </div>
+
+    <!-- 图鉴 -->
+    <div id="codex-panel">
+      <div class="codex-box">
+        <div class="codex-head">
+          <div class="codex-title" id="codex-title">📓 图鉴</div>
+          <button id="codex-close-btn" title="关闭">✕</button>
+        </div>
+        <div class="codex-body" id="codex-grid"></div>
       </div>
     </div>
 
@@ -234,6 +270,23 @@
           <div class="redeem-btns">
             <button id="redeem-cancel-btn">取消</button>
             <button id="redeem-confirm-btn">兑换</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 导入存档二次确认 -->
+    <div id="import-warn-panel">
+      <div class="redeem-box">
+        <div class="redeem-head">
+          <div class="redeem-title">⚠️ 导入存档</div>
+          <button id="import-warn-close-btn" title="关闭">✕</button>
+        </div>
+        <div class="redeem-body">
+          <p class="redeem-tip">这时候导入会覆盖原存档！<br>原存档无法找回！请先保存。</p>
+          <div class="redeem-btns">
+            <button id="import-warn-export-btn">导出存档</button>
+            <button id="import-warn-ok-btn">知道了</button>
           </div>
         </div>
       </div>
@@ -259,6 +312,7 @@
   <script src="js/effects.js"></script>
   <script src="js/map.js"></script>
   <script src="js/items.js"></script>
+  <script src="js/inspect.js"></script>
   <script src="js/inventory.js"></script>
   <script src="js/boxes.js"></script>
   <script src="js/extract.js"></script>

@@ -2,7 +2,7 @@
 const WEAPONS = (function () {
   // index 0=Classic(自带) 1=Ghost 2=Spectre 3=Vandal 4=Odin
   const DEFS = [
-    { id: 'classic', name: '经典 Classic', price: 0,    damage: 26, headMult: 3, mag: 12, reserve: Infinity,  rpm: 400, auto: false, spread: 0.9, moveSpread: 2.0, recoil: 0.5, bloomPerShot: 0.18, reload: 1.05, sound: 'pistol', color: 0x3f4a5a },
+    { id: 'classic', name: '标配 Classic', price: 0,    damage: 26, headMult: 3, mag: 12, reserve: Infinity,  rpm: 400, auto: false, spread: 0.9, moveSpread: 2.0, recoil: 0.5, bloomPerShot: 0.18, reload: 1.05, sound: 'pistol', color: 0x3f4a5a },
     { id: 'ghost',   name: '鬼魅 Ghost',  price: 300,  damage: 28, headMult: 3, mag: 15,  reserve: Infinity,  rpm: 360, auto: false, spread: 0.8, moveSpread: 2.0, recoil: 0.45, bloomPerShot: 0.15, reload: 1.2,  sound: 'pistol', color: 0x5a6a7a },
     { id: 'spectre', name: '蜂刺 Spectre', price: 500,  damage: 24, headMult: 3, mag: 30,  reserve: Infinity,  rpm: 720, auto: true,  spread: 1.5, moveSpread: 2.8, recoil: 0.35, bloomPerShot: 0.13, reload: 1.4,  sound: 'smg',   color: 0x2f4f6f },
     { id: 'vandal',  name: '狂徒 Vandal', price: 800,  damage: 40, headMult: 4, mag: 25,  reserve: Infinity,  rpm: 540, auto: true,  spread: 1.2, moveSpread: 3.2, recoil: 0.7,  bloomPerShot: 0.16, reload: 1.82, sound: 'rifle', color: 0x6b3a1f },

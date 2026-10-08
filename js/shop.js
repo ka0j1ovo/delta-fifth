@@ -41,7 +41,7 @@ const SHOP = (function () {
   function tryBuy(index) {
     const d = WEAPONS.DEFS[index];
     if (!d) return;
-    if (index === 0) { HUD.prompt('经典 Classic 自带，无需购买'); return; }
+    if (index === 0) { HUD.prompt('标配 Classic 自带，无需购买'); return; }
     if (WEAPONS.isOwned(index)) { HUD.prompt('已拥有 ' + d.name); return; }
     if (INVENTORY.spendGold(d.price)) {
       WEAPONS.own(index);
@@ -49,17 +49,17 @@ const SHOP = (function () {
       Audio.buy();
       HUD.prompt('购买成功：' + d.name);
     } else {
-      HUD.prompt('金币不足（需 ' + d.price + '）');
+      HUD.prompt('哈基币不足（需 ' + d.price + '）');
     }
   }
 
-  // 购买血包（300 金币）：血量不满回 30，满血存入背包
+  // 购买血包（300 哈基币）：血量不满回 30，满血存入背包
   function tryBuyMedkit() {
     if (playerObj.hp >= playerObj.maxHp && INVENTORY.isBackpackFull()) {
       HUD.prompt('血量与背包均已满，无法购买');
       return;
     }
-    if (!INVENTORY.spendGold(300)) { HUD.prompt('金币不足（需 300）'); return; }
+    if (!INVENTORY.spendGold(300)) { HUD.prompt('哈基币不足（需 300）'); return; }
     if (playerObj.hp < playerObj.maxHp) { playerObj.heal(30); HUD.prompt('+30 HP'); }
     else { INVENTORY.addToBackpack(ITEMS.medkit()); HUD.prompt('血包已存入背包'); }
     Audio.buy();
