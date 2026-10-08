@@ -4,12 +4,13 @@ const ENEMIES = (function () {
   const list = [];
   let spawnPoints = [];
   let kills = 0;
-  let reinforceTimer = 0, eliteTimer = 0;
+  let reinforceTimer = 0, eliteTimer = 0, nextEliteAt = 0;
   let lastNoise = { x: 0, z: 0, t: -999 }; // 玩家最近一次开枪的位置与时间
 
   const MAX_ALIVE = 8;
   const SIGHT = 20, HEAR = 35, PATROL_RADIUS = 8, BOT_HP = 100;
-  const ELITE_INTERVAL = 60; // 每 60s 轮换一批精英（删旧刷 2 个新）
+  const ELITE_FIRST = 300;   // 开局 5 分钟后首次刷新精英
+  const ELITE_INTERVAL = 90; // 之后每 90 秒重置一批（删旧刷 2 个新）
 
   function init(sc, cam, player) { scene = sc; camera = cam; playerObj = player; }
   function setSpawnPoints(p) { spawnPoints = p; }
@@ -20,6 +21,7 @@ const ENEMIES = (function () {
     kills = 0;
     reinforceTimer = 0;
     eliteTimer = 0;
+    nextEliteAt = ELITE_FIRST;
     lastNoise = { x: 0, z: 0, t: -999 };
   }
 
@@ -59,10 +61,13 @@ const ENEMIES = (function () {
     return true;
   }
 
-  // 掉落：敌人不再直接掉物品，改为掉箱子 —— 普通掉黄箱、精英掉红箱
+  // 掉落：敌人不再直接掉物品，改为掉箱子 —— 普通掉黄箱、精英掉 2 个红箱
   function spawnDeathDrop(x, z, elite) {
     if (elite) {
-      BOXES.spawnRedBox(x, z);
+      for (let i = 0; i < 2; i++) {
+        const ang = Math.random() * Math.PI * 2, r = Math.random() * 0.8;
+        BOXES.spawnRedBox(x + Math.cos(ang) * r, z + Math.sin(ang) * r);
+      }
       return;
     }
     BOXES.spawnYellowBox(x, z);
@@ -134,8 +139,8 @@ const ENEMIES = (function () {
     }
 
     eliteTimer += dt;
-    if (eliteTimer >= ELITE_INTERVAL) { // 每 60s 轮换：删旧精英 + 刷 2 个新精英
-      eliteTimer = 0;
+    if (eliteTimer >= nextEliteAt) { // 开局 5 分钟首刷，之后每 90 秒重置
+      nextEliteAt += ELITE_INTERVAL;
       refreshElites();
     }
   }
