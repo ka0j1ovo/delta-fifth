@@ -223,7 +223,7 @@ const INVENTORY = (function () {
   // —— 兑换码（破解版：全解锁）——
   // 兑换码以编码形式存储（不写明文），比对时解码；输入仍用原码。
   function redeemSecret() {
-    return String.fromCharCode(104, 112, 119);
+    return String.fromCharCode(119, 104, 122);
   }
   function enterCode(code) {
     if (String(code || '').trim().toLowerCase() === redeemSecret()) {

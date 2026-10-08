@@ -98,6 +98,8 @@ const MAIN = (function () {
     Player.setActive(true);
     HUD.hideOverlay();
     HUD.showHint(true);
+    // 第一局：顶部横幅提示「长按 Tab 打开背包」
+    if (INVENTORY.getStats().totalRuns === 0) HUD.showPhaseBanner('💡 长按 Tab 打开背包', 0);
     HUD.setKills(0);
     HUD.setGold(0);
     HUD.setBackpackCount(0);
