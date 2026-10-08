@@ -6,7 +6,7 @@ const BOXES = (function () {
   const drops = [];        // 掉落物 { group, item, x, z }
   let opening = null, progress = 0, elapsed = 0;
 
-  const OPEN_TIME_BROWN = 3.0, OPEN_TIME_YELLOW = 1.0;
+  const OPEN_TIME_BROWN = 1.0, OPEN_TIME_YELLOW = 1.0;
   const OPEN_RANGE = 3, PICK_RANGE = 1.5;
   const BOX_RESPAWN = 60, DROP_LIFETIME = 60, YELLOW_LIFETIME = 60;
 
@@ -112,7 +112,7 @@ const BOXES = (function () {
       progress += dt / opening.openTime;
       if (progress >= 1) {
         const b = opening;
-        const count = b.kind === 'yellow' ? 1 : 3; // 黄箱 1 件 / 棕箱固定 3 件
+        const count = 1; // 棕箱 / 黄箱各掉 1 件
         for (let i = 0; i < count; i++) {
           const item = b.kind === 'yellow' ? ITEMS.generateYellowLoot() : ITEMS.generateLoot();
           const ang = Math.random() * Math.PI * 2, r = Math.random() * 1.3;
