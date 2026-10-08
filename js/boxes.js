@@ -55,6 +55,12 @@ const BOXES = (function () {
     yellowBoxes.push({ group, x, z, opened: false, expireAt: elapsed + YELLOW_LIFETIME, kind: 'yellow', openTime: OPEN_TIME_YELLOW });
   }
 
+  // 黄箱内容：沿用旧掉落倍率 —— 10% 血包 / 50% 战利品 / 40% 100 哈基币
+  function rollYellowContent() {
+    const r = Math.random();
+    return r < 0.1 ? ITEMS.medkit() : (r < 0.6 ? ITEMS.generateYellowLoot() : ITEMS.gold(100));
+  }
+
   function clear() {
     for (const b of boxes) scene.remove(b.group);
     boxes.length = 0;
@@ -114,7 +120,7 @@ const BOXES = (function () {
         const b = opening;
         const count = 1; // 棕箱 / 黄箱各掉 1 件
         for (let i = 0; i < count; i++) {
-          const item = b.kind === 'yellow' ? ITEMS.generateYellowLoot() : ITEMS.generateLoot();
+          const item = b.kind === 'yellow' ? rollYellowContent() : ITEMS.generateLoot();
           const ang = Math.random() * Math.PI * 2, r = Math.random() * 1.3;
           spawnDrop(item, b.x + Math.cos(ang) * r, b.z + Math.sin(ang) * r);
         }
