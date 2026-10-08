@@ -222,12 +222,12 @@ const HUD = (function () {
     el.redeemCloseBtn.addEventListener('click', closeRedeem);
     el.redeemCancelBtn.addEventListener('click', closeRedeem);
     el.redeemConfirmBtn.addEventListener('click', () => {
-      const ok = INVENTORY.enterCode(el.redeemInput.value);
+      const r = INVENTORY.enterCode(el.redeemInput.value);
       el.redeemInput.value = '';
-      if (ok) {
+      if (r) {
         closeRedeem();
         showMenu();
-        toast('兑换成功！已解锁全部内容');
+        toast(r === 'all' ? '兑换成功！已解锁全部内容' : '兑换成功！获得 10000 点数');
       } else {
         toast('兑换码无效');
       }

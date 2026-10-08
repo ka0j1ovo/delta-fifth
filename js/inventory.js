@@ -220,20 +220,36 @@ const INVENTORY = (function () {
   function safeSlots() { return stats.cracked ? SAFE_MAX : Math.min(SAFE_MAX, Math.floor(stats.totalSpent / SAFE_UNLOCK_COST)); }
   function safeBoxItems() { return safeBox.slice(); }
 
-  // —— 兑换码（破解版：全解锁）——
-  // 兑换码以编码形式存储（不写明文），比对时解码；输入仍用原码。
-  function redeemSecret() {
-    return String.fromCharCode(119, 104, 122);
+  // —— 兑换码（加密存储，源码不写明文）——
+  // 两个码，均用 XOR 加密后以十六进制存储，比对时先解密：
+  //   hpw = 破解版全解锁（格子 / 皮肤 / 保险箱全开，铺满传说·史诗）
+  //   whz = 开档送 10000 点数（其余不变）
+  const CODE_KEY = 'DeltaFifth';
+  function xorDecrypt(hex) {
+    let out = '';
+    for (let i = 0; i < hex.length; i += 2) {
+      out += String.fromCharCode(parseInt(hex.substr(i, 2), 16) ^ CODE_KEY.charCodeAt((i / 2) % CODE_KEY.length));
+    }
+    return out;
   }
+  const CODE_ALL = xorDecrypt('2c151b');     // hpw
+  const CODE_POINTS = xorDecrypt('330d16');  // whz
+
   function enterCode(code) {
-    if (String(code || '').trim().toLowerCase() === redeemSecret()) {
+    const c = String(code || '').trim().toLowerCase();
+    if (c === CODE_ALL) {
       stats.cracked = true;
       stats = normalizeStats(stats);
       fillCrackedCollection();
       save();
-      return true;
+      return 'all';
     }
-    return false;
+    if (c === CODE_POINTS) {
+      stats.points += 10000;
+      save();
+      return 'points';
+    }
+    return null;
   }
 
   // 破解版：把全部传说/史诗物品铺满展示柜 + 仓库（崭新 1.0，价值取上限；幂等，已存在则跳过）
