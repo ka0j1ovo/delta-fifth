@@ -451,7 +451,7 @@ const HUD = (function () {
     const items = INVENTORY.safeBoxItems();
     const cap = items.length;
     if (cap === 0) {
-      el.safeboxGrid.innerHTML = '<div class="sb-lock-tip">商店累计消费 10000 点自动解锁 1 格</div>';
+      el.safeboxGrid.innerHTML = '<div class="sb-lock-tip">仓库商店消费满 10000 点解锁 1 格</div>';
       el.sbSubtitle.textContent = '🔒 保险箱（0/' + INVENTORY.SAFE_MAX + '）';
       return;
     }
@@ -851,9 +851,9 @@ const HUD = (function () {
       + (wFull ? '<span class="ms-soldout">售罄</span>'
         : '<button class="ms-buy" data-action="warehouse">💎 ' + INVENTORY.WAREHOUSE_SLOT_PRICE + '</button>');
 
-    // 保险箱：商店内累计消费满 10000 点自动 +1 格，最多 4 格
+    // 保险箱：仓库商店内累计消费满 10000 点自动 +1 格，最多 4 格
     const safe = INVENTORY.safeSlots();
-    const spent = s.totalSpent;
+    const spent = s.shopSpent;
     let safeHtml;
     if (safe >= INVENTORY.SAFE_MAX) {
       safeHtml = '<div class="ms-row-info"><span class="ms-row-name">🔒 保险箱格子</span>'
@@ -866,7 +866,7 @@ const HUD = (function () {
       safeHtml = '<div class="ms-row-info"><span class="ms-row-name">🔒 保险箱格子</span>'
         + '<span class="ms-row-count">' + safe + '/' + INVENTORY.SAFE_MAX + '</span>'
         + '<div class="ms-progress"><div class="ms-progress-fill" style="width:' + prog + '%"></div></div>'
-        + '<span class="ms-row-note">累计消费 ' + spent + ' / ' + next + ' 点自动 +1</span></div>';
+        + '<span class="ms-row-note">仓库商店消费 ' + spent + ' / ' + next + ' 点 +1</span></div>';
     }
     el.msSafeRow.innerHTML = safeHtml;
 

@@ -3,7 +3,7 @@ const INVENTORY = (function () {
   const BACKPACK_SIZE = 9;       // 默认/基准（买票进入）
   const BACKPACK_MAX = 15;       // 上限：买票 9 + 重甲 6
   const SAFE_MAX = 4;            // 保险箱最多 4 格
-  const SAFE_UNLOCK_COST = 10000; // 累计消费点数每满 10000 自动解锁 1 格
+  const SAFE_UNLOCK_COST = 10000; // 仓库商店每消费满 10000 点自动解锁 1 格保险箱
   const PRECIOUS_MAX = 9;     // 珍贵展示柜：3×3 最多 9 格（开局 1 格）
   const WAREHOUSE_MAX = 400;  // 普通仓库：最多 400 格（10 页 × 每页 5×8=40 格；开局 3×5=15 格）
   const WAREHOUSE_PER_PAGE = 40; // 每页 8 行 × 5 列
@@ -55,7 +55,7 @@ const INVENTORY = (function () {
     return {
       totalRuns: 0, survivedRuns: 0, totalValue: 0, totalKills: 0,
       points: 0,       // 元货币：点数（持久化，仓库格子 / 皮肤 / 开局进入用）
-      totalSpent: 0,   // 累计消费点数（用于保险箱解锁）
+      shopSpent: 0,    // 仓库商店累计消费点数（用于保险箱解锁）
       cracked: false,  // 兑换码解锁的破解版（全解锁）
       preciousSlots: INIT_PRECIOUS,
       warehouseSlots: INIT_WAREHOUSE,
@@ -82,7 +82,10 @@ const INVENTORY = (function () {
     base.totalValue = clampInt(base.totalValue, 0, Number.MAX_SAFE_INTEGER, 0);
     base.totalKills = clampInt(base.totalKills, 0, Number.MAX_SAFE_INTEGER, 0);
     base.points = clampInt(base.points, 0, Number.MAX_SAFE_INTEGER, 0);
-    base.totalSpent = clampInt(base.totalSpent, 0, Number.MAX_SAFE_INTEGER, 0);
+    // 旧字段 totalSpent（所有点数消费累计）→ 迁移为 shopSpent（仅仓库商店消费）
+    if (s && typeof s.shopSpent !== 'number' && typeof s.totalSpent === 'number') base.shopSpent = s.totalSpent;
+    delete base.totalSpent;
+    base.shopSpent = clampInt(base.shopSpent, 0, Number.MAX_SAFE_INTEGER, 0);
     base.preciousSlots = clampInt(base.preciousSlots, INIT_PRECIOUS, PRECIOUS_MAX, INIT_PRECIOUS);
     base.warehouseSlots = clampInt(base.warehouseSlots, INIT_WAREHOUSE, WAREHOUSE_MAX, INIT_WAREHOUSE);
     base.warehouse = normalizeWarehouse(base.warehouse);
@@ -113,7 +116,7 @@ const INVENTORY = (function () {
       base.preciousSlots = PRECIOUS_MAX;
       base.warehouseSlots = WAREHOUSE_MAX;
       base.ownedSkins = SKINS.map(sk => sk.id);
-      base.totalSpent = Math.max(base.totalSpent, SAFE_UNLOCK_COST * SAFE_MAX);
+      base.shopSpent = Math.max(base.shopSpent, SAFE_UNLOCK_COST * SAFE_MAX);
     }
 
     return base;
@@ -204,20 +207,19 @@ const INVENTORY = (function () {
   }
   function getGold() { return gold; }
 
-  // —— 元点数（持久，仓库格子 / 皮肤 / 开局进入；累计消费用于保险箱解锁）——
+  // —— 元点数（持久，仓库格子 / 皮肤 / 开局进入；仓库商店消费用于保险箱解锁）——
   function getPoints() { return stats.points; }
   function spendPoints(n) {
     n = Math.floor(Number(n));
     if (!Number.isFinite(n) || n < 0) return false;
     if (stats.points < n) return false;
     stats.points -= n;
-    stats.totalSpent += n;
     save();
     return true;
   }
 
-  // —— 保险箱（累计消费点数解锁格子，最多 4；局内物品放入后死亡也可带出）——
-  function safeSlots() { return stats.cracked ? SAFE_MAX : Math.min(SAFE_MAX, Math.floor(stats.totalSpent / SAFE_UNLOCK_COST)); }
+  // —— 保险箱（仓库商店累计消费点数解锁格子，最多 4；局内物品放入后死亡也可带出）——
+  function safeSlots() { return stats.cracked ? SAFE_MAX : Math.min(SAFE_MAX, Math.floor(stats.shopSpent / SAFE_UNLOCK_COST)); }
   function safeBoxItems() { return safeBox.slice(); }
 
   // —— 兑换码（加密存储，源码不写明文）——
@@ -428,16 +430,24 @@ const INVENTORY = (function () {
     return count ? { count, points } : null;
   }
 
+  // 仓库商店消费：扣点并计入 shopSpent（仅商店内消费推进保险箱解锁）
+  function spendShopPoints(n) {
+    if (!spendPoints(n)) return false;
+    stats.shopSpent += n;
+    save();
+    return true;
+  }
+
   function buyPreciousSlot() {
     if (stats.preciousSlots >= PRECIOUS_MAX) return { ok: false, reason: 'full' };
-    if (!spendPoints(PRECIOUS_SLOT_PRICE)) return { ok: false, reason: 'poor' };
+    if (!spendShopPoints(PRECIOUS_SLOT_PRICE)) return { ok: false, reason: 'poor' };
     stats.preciousSlots++;
     save();
     return { ok: true };
   }
   function buyWarehouseSlot() {
     if (stats.warehouseSlots >= WAREHOUSE_MAX) return { ok: false, reason: 'full' };
-    if (!spendPoints(WAREHOUSE_SLOT_PRICE)) return { ok: false, reason: 'poor' };
+    if (!spendShopPoints(WAREHOUSE_SLOT_PRICE)) return { ok: false, reason: 'poor' };
     stats.warehouseSlots++;
     save();
     return { ok: true };
@@ -447,7 +457,7 @@ const INVENTORY = (function () {
     const def = SKINS.find(sk => sk.id === id);
     if (!def) return { ok: false, reason: 'bad' };
     if (stats.ownedSkins.includes(id)) return { ok: false, reason: 'owned' };
-    if (!spendPoints(def.price)) return { ok: false, reason: 'poor' };
+    if (!spendShopPoints(def.price)) return { ok: false, reason: 'poor' };
     stats.ownedSkins.push(id);
     save();
     return { ok: true };
