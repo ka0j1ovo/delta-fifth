@@ -414,7 +414,7 @@ const HUD = (function () {
     }
     el.backpackGrid.innerHTML = html;
 
-    // 背包格子作为拖放目标：接收保险箱物品拖回
+    // 背包格子作为拖放目标：接收保险箱物品拖回 / 背包内整理移动
     el.backpackGrid.querySelectorAll('.bp-cell').forEach(cell => {
       cell.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; cell.classList.add('dragover'); });
       cell.addEventListener('dragleave', () => cell.classList.remove('dragover'));
@@ -422,15 +422,16 @@ const HUD = (function () {
         e.preventDefault();
         cell.classList.remove('dragover');
         const d = parseDrag(e.dataTransfer.getData('text/plain'));
-        if (!d || d.src !== 'sb') return;
+        if (!d) return;
         const bpi = parseInt(cell.dataset.i, 10);
         if (!Number.isFinite(bpi)) return;
-        INVENTORY.moveSafeToBackpack(d.i, bpi);
+        if (d.src === 'sb') INVENTORY.moveSafeToBackpack(d.i, bpi);
+        else if (d.src === 'bp') INVENTORY.moveBackpackToBackpack(d.i, bpi);
         renderBackpack();
       });
     });
 
-    // 背包格子作为拖放源（拖到保险箱）；拖出背包面板外则自动丢弃
+    // 背包格子作为拖放源（拖到保险箱/其他背包格整理）；拖出背包面板外则丢弃
     el.backpackGrid.querySelectorAll('.bp-cell[draggable]').forEach(cell => {
       cell.addEventListener('dragstart', e => {
         e.dataTransfer.setData('text/plain', 'bp:' + cell.dataset.i);

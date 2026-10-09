@@ -294,6 +294,15 @@ const INVENTORY = (function () {
     safeBox[sbi] = target;
     return true;
   }
+  function moveBackpackToBackpack(from, to) {
+    if (from === to || from < 0 || from >= backpackSize || to < 0 || to >= backpackSize) return false;
+    const item = backpack[from];
+    if (!item) return false;
+    const target = backpack[to];
+    backpack[to] = item;
+    backpack[from] = target; // target 可能为 null（移到空格）
+    return true;
+  }
   function depositSafeBox() {
     let value = 0, overflowValue = 0, overflowed = false;
     for (let i = 0; i < safeBox.length; i++) {
@@ -496,7 +505,7 @@ const INVENTORY = (function () {
   return {
     newRun, backpackCount, isBackpackFull, addToBackpack, removeFromBackpack, consumeMedkit, backpackItems, clearBackpack, getBackpackSize,
     addGold, spendGold, getGold, getPoints, spendPoints,
-    safeSlots, safeBoxItems, moveBackpackToSafe, moveSafeToBackpack, depositSafeBox,
+    safeSlots, safeBoxItems, moveBackpackToSafe, moveSafeToBackpack, moveBackpackToBackpack, depositSafeBox,
     enterCode, isCracked,
     recordKill, finishRun, depositBackpack, payExtractionFee, discardBackpackBelow, discardWarehouseBelow, getStats, surviveRate, swapSlots, sellItem, sellItems,
     buyPreciousSlot, buyWarehouseSlot, buySkin, applySkin, getSkins,
