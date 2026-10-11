@@ -93,6 +93,13 @@ const HUD = (function () {
     el.codexCloseBtn = $('codex-close-btn');
     el.codexGrid = $('codex-grid');
     el.codexTitle = $('codex-title');
+    el.settingsBtn = $('settings-btn');
+    el.settingsPanel = $('settings-panel');
+    el.settingsCloseBtn = $('settings-close-btn');
+    el.adsHoldBtn = $('ads-hold-btn');
+    el.adsToggleBtn = $('ads-toggle-btn');
+    el.sensSlider = $('sens-slider');
+    el.sensValue = $('sens-value');
     el.importWarnPanel = $('import-warn-panel');
     el.importWarnOkBtn = $('import-warn-ok-btn');
     el.importWarnExportBtn = $('import-warn-export-btn');
@@ -227,6 +234,15 @@ const HUD = (function () {
 
     el.codexBtn.addEventListener('click', openCodex);
     el.codexCloseBtn.addEventListener('click', closeCodex);
+
+    el.settingsBtn.addEventListener('click', openSettings);
+    el.settingsCloseBtn.addEventListener('click', closeSettings);
+    el.adsHoldBtn.addEventListener('click', () => { SETTINGS.setAdsMode('hold'); renderSettingsAds(); });
+    el.adsToggleBtn.addEventListener('click', () => { SETTINGS.setAdsMode('toggle'); renderSettingsAds(); });
+    el.sensSlider.addEventListener('input', () => {
+      SETTINGS.setSensitivity(el.sensSlider.value);
+      renderSettingsSens();
+    });
   }
 
   // —— 基础战斗 HUD ——
@@ -727,6 +743,20 @@ const HUD = (function () {
   function openCodex() { renderCodex(); el.codexPanel.classList.add('show'); }
   function closeCodex() { el.codexPanel.classList.remove('show'); }
 
+  // —— 设置：开镜方式（点击/长按）+ 灵敏度滑条 ——
+  function renderSettingsAds() {
+    const toggle = SETTINGS.getAdsMode() === 'toggle';
+    el.adsHoldBtn.classList.toggle('active', !toggle);
+    el.adsToggleBtn.classList.toggle('active', toggle);
+  }
+  function renderSettingsSens() {
+    const s = SETTINGS.getSensitivity();
+    el.sensValue.textContent = s.toFixed(2);
+    el.sensSlider.value = String(s);
+  }
+  function openSettings() { renderSettingsAds(); renderSettingsSens(); el.settingsPanel.classList.add('show'); }
+  function closeSettings() { el.settingsPanel.classList.remove('show'); }
+
   // —— 开局进入方式选择（花费点数）——
   const LOADOUT_ENTRIES = [
     { id: 'eco',    name: 'eco 进入', hp: 50,  slots: 6, cost: 0,   desc: '50 血 · 背包 6 格 · 免费' },
@@ -977,6 +1007,7 @@ const HUD = (function () {
     closeTutorial();
     closeRedeem();
     closeCodex();
+    closeSettings();
     overlayVisible = false;
   }
   function isOverlayVisible() { return overlayVisible; }

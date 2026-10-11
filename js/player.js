@@ -46,7 +46,7 @@ const Player = (function () {
     const mx = e.movementX, my = e.movementY;
     if (!Number.isFinite(mx) || !Number.isFinite(my)) return;
     if (Math.abs(mx) > 300 || Math.abs(my) > 300) return;
-    const sens = ads ? 0.75 : 1; // 开镜灵敏度略降
+    const sens = (SETTINGS.getSensitivity() * 2) * (ads ? 0.75 : 1); // 灵敏度 0.5=当前手感，0=最慢，1=最快；开镜略降
     yaw -= mx * 0.0011 * sens;
     pitch -= my * 0.0011 * sens;
     const lim = 1.55;
@@ -61,10 +61,10 @@ const Player = (function () {
 
   function onMouseDown(e) {
     Audio.resume();
-    if (e.button === 2) { // 右键开镜（固定长按）
+    if (e.button === 2) { // 右键开镜：长按或点击（设置里切换）
       if (!active || HUD.isOverlayVisible() || !alive || backpackOpen) return;
       if (!locked) lock();
-      ads = true;
+      ads = SETTINGS.getAdsMode() === 'toggle' ? !ads : true;
       return;
     }
     if (e.button !== 0) return;
@@ -75,7 +75,7 @@ const Player = (function () {
   }
   function onMouseUp(e) {
     if (e.button === 0) mouseDown = false;
-    if (e.button === 2) ads = false;
+    if (e.button === 2 && SETTINGS.getAdsMode() !== 'toggle') ads = false;
   }
 
   function openBackpack() {

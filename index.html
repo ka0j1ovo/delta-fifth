@@ -121,6 +121,7 @@
               <button id="tutorial-btn">📖 新手教程</button>
               <button id="codex-btn">📓 图鉴</button>
               <button id="redeem-btn">🎁 兑换码</button>
+              <button id="settings-btn">⚙️ 设置</button>
             </div>
             <div id="save-actions">
               <button id="export-save-btn">导出存档</button>
@@ -274,6 +275,30 @@
       </div>
     </div>
 
+    <!-- 设置 -->
+    <div id="settings-panel">
+      <div class="settings-box">
+        <div class="settings-head">
+          <div class="settings-title">⚙️ 设置</div>
+          <button id="settings-close-btn" title="关闭">✕</button>
+        </div>
+        <div class="settings-body">
+          <div class="settings-row">
+            <div class="settings-label">开镜方式</div>
+            <div class="settings-ads">
+              <button id="ads-hold-btn" class="ads-opt">长按开镜</button>
+              <button id="ads-toggle-btn" class="ads-opt">点击开镜</button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label">灵敏度 <b id="sens-value">0.50</b></div>
+            <input id="sens-slider" type="range" min="0" max="1" step="0.01" value="0.5">
+            <div class="settings-scale"><span>特别低 0</span><span>特别高 1</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 导入存档二次确认 -->
     <div id="import-warn-panel">
       <div class="redeem-box">
@@ -308,6 +333,7 @@
 
   <script src="js/three.min.js"></script>
   <script src="js/audio.js"></script>
+  <script src="js/settings.js"></script>
   <script src="js/effects.js"></script>
   <script src="js/map.js"></script>
   <script src="js/items.js"></script>
