@@ -41,6 +41,7 @@ const MAIN = (function () {
     EXTRACT.init(scene, Player);
     SHOP.init(scene, Player);
     HUD.init();
+    if (typeof TOUCH !== 'undefined') TOUCH.init();
 
     document.getElementById('start-run-btn').addEventListener('click', () => { Audio.resume(); Audio.preload(); HUD.showLoadout(); });
     document.getElementById('result-menu-btn').addEventListener('click', () => { showMenu(); });
@@ -63,6 +64,7 @@ const MAIN = (function () {
     HUD.showHint(false);
     HUD.updateShopPanel(false);
     HUD.setBackpackPanel(false);
+    if (typeof TOUCH !== 'undefined') TOUCH.endGame();
   }
 
   function enterFullscreen() {
@@ -96,10 +98,16 @@ const MAIN = (function () {
     HUD.setMaxHealth(loadout.maxHp);
     Player.respawn();
     Player.setActive(true);
+    if (typeof TOUCH !== 'undefined') TOUCH.startGame();
     HUD.hideOverlay();
-    HUD.showHint(true);
-    // 第一局：顶部横幅提示「长按 Tab 打开背包」
-    if (INVENTORY.getStats().totalRuns === 0) HUD.showPhaseBanner('💡 长按 Tab 打开背包', 0);
+    HUD.showHint(!(typeof TOUCH !== 'undefined' && TOUCH.isEnabled()));
+    // 第一局：按设备给出对应操作提示
+    if (INVENTORY.getStats().totalRuns === 0) {
+      const tip = (typeof TOUCH !== 'undefined' && TOUCH.isEnabled())
+        ? '📱 手游键位已启用 · 左摇杆移动 / 拖动屏幕瞄准 / 右下开火'
+        : '💡 长按 Tab 打开背包';
+      HUD.showPhaseBanner(tip, 0);
+    }
     HUD.setKills(0);
     HUD.setGold(0);
     HUD.setBackpackCount(0);
@@ -119,6 +127,7 @@ const MAIN = (function () {
     state = 'result';
     pendingEnd = null;
     Player.setActive(false);
+    if (typeof TOUCH !== 'undefined') TOUCH.endGame();
     if (document.pointerLockElement) document.exitPointerLock();
     HUD.setAction('', -1);
     HUD.updateShopPanel(false);
@@ -159,7 +168,7 @@ const MAIN = (function () {
     }
 
     if (state === 'playing') {
-      if (Player.backpackOpen) { // 背包打开：暂停整局
+      if (Player.backpackOpen || (typeof TOUCH !== 'undefined' && TOUCH.isGamePaused())) { // 背包/手机暂停：暂停整局
         renderer.render(scene, camera);
         return;
       }
@@ -180,6 +189,7 @@ const MAIN = (function () {
         WEAPONS.update(dt);
         SHOP.update();
         BOXES.update(dt);
+        if (typeof TOUCH !== 'undefined') TOUCH.tick();
         Effects.update(dt);
 
         const ex = EXTRACT.update(dt, elapsed);

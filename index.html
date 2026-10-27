@@ -2,11 +2,112 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b0d10'/%3E%3Cpath d='M32 8l24 24-24 24L8 32z' fill='none' stroke='%23ffb300' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23ffb300'/%3E%3C/svg%3E">
 <title>Delta Fifth（四角洲不动）· 撤离射击</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <svg id="touch-icon-sprite" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="ticon-fire" viewBox="0 0 64 64">
+        <circle cx="32" cy="32" r="21" fill="none" stroke="currentColor" stroke-width="2.2"/>
+        <circle cx="32" cy="32" r="12.5" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".65"/>
+        <path d="M32 3v15M32 46v15M3 32h15M46 32h15" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M32 23.5l8.5 8.5-8.5 8.5-8.5-8.5z" fill="currentColor"/>
+        <circle cx="32" cy="32" r="2" fill="#14171c"/>
+      </symbol>
+      <symbol id="ticon-ads" viewBox="0 0 64 64">
+        <circle cx="32" cy="32" r="19" fill="none" stroke="currentColor" stroke-width="2"/>
+        <circle cx="32" cy="32" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M32 8v13M32 43v13M8 32h13M43 32h13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M15 15l6 6M49 15l-6 6M15 49l6-6M49 49l-6-6" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".55"/>
+      </symbol>
+      <symbol id="ticon-reload" viewBox="0 0 64 64">
+        <path d="M49 24a19 19 0 1 0 .5 15" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
+        <path d="M49 11v15H34" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M23 28h16l-2.5 15h-11z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+        <path d="M26 23h10v5H26z" fill="currentColor" opacity=".9"/>
+      </symbol>
+      <symbol id="ticon-jump" viewBox="0 0 64 64">
+        <path d="M16 37l16-16 16 16M16 51l16-16 16 16" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M10 17v-5h5M54 17v-5h-5" fill="none" stroke="currentColor" stroke-width="1.8" opacity=".45"/>
+      </symbol>
+      <symbol id="ticon-walk" viewBox="0 0 64 64">
+        <path d="M27 9c3.8 0 6 2.7 6 6.5 0 4-2.7 6.8-6 6.8s-6-2.8-6-6.8c0-3.8 2.2-6.5 6-6.5z" fill="none" stroke="currentColor" stroke-width="2.5"/>
+        <path d="M27 24c4 0 6.6 2 9 6l7.5 12.5-4.2 2.6-5.4-8.2-2 8.7 7.2 10.8-4.3 3L25 47l-2.3-9.5-6 5.8-3.2-3.6 7-8.5c1.6-2 3.5-3.2 6.5-3.2z" fill="currentColor"/>
+        <path d="M13 52h11M38 58h12" fill="none" stroke="currentColor" stroke-width="1.8" opacity=".4"/>
+      </symbol>
+      <symbol id="ticon-interact" viewBox="0 0 64 64">
+        <path d="M13 29l19-10 19 10v22H13z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/>
+        <path d="M13 29l19 10 19-10M32 39v12" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".65"/>
+        <path d="M38 13l3.2 3.2-6.5 6.5-3.2-3.2zM45 17l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M22 17h8" stroke="currentColor" stroke-width="2" opacity=".5" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="ticon-bag" viewBox="0 0 64 64">
+        <path d="M20 22v-4c0-6 4.6-10 12-10s12 4 12 10v4" fill="none" stroke="currentColor" stroke-width="2.6"/>
+        <path d="M14 23h36v17a18 18 0 0 1-18 18 18 18 0 0 1-18-18z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/>
+        <path d="M22 36h20M27 42h10" stroke="currentColor" stroke-width="2" opacity=".65" stroke-linecap="round"/>
+        <path d="M24 23v8M40 23v8" stroke="currentColor" stroke-width="3" opacity=".9"/>
+      </symbol>
+      <symbol id="ticon-pause" viewBox="0 0 64 64">
+        <circle cx="32" cy="32" r="22" fill="none" stroke="currentColor" stroke-width="2.2" opacity=".55"/>
+        <path d="M25 22v20M39 22v20" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="ticon-boot" viewBox="0 0 64 64">
+        <path d="M22 11h12v20l15 7v10H17c-3 0-5-2-5-5V29l7-3 3-15z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/>
+        <path d="M15 42h31" stroke="currentColor" stroke-width="2" opacity=".55"/>
+        <path d="M21 23h8M21 29h6" stroke="currentColor" stroke-width="1.8" opacity=".55" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="ticon-cross" viewBox="0 0 64 64">
+        <path d="M25 12h14v13h13v14H39v13H25V39H12V25h13z" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linejoin="round"/>
+        <circle cx="32" cy="32" r="7" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".6"/>
+      </symbol>
+      <symbol id="ticon-layout" viewBox="0 0 64 64">
+        <path d="M24 12H12v12M40 12h12v12M24 52H12V40M40 52h12V40" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"/>
+        <path d="M24 24h16v16H24z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="4 4"/>
+        <path d="M32 8v10M32 46v10M8 32h10M46 32h10" stroke="currentColor" stroke-width="1.6" opacity=".7"/>
+      </symbol>
+      <symbol id="ticon-chev" viewBox="0 0 64 64">
+        <path d="M18 26l14-14 14 14M18 48l14-14 14 14" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      </symbol>
+      <symbol id="ticon-minus" viewBox="0 0 24 24"><path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+      <symbol id="ticon-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+      <symbol id="ticon-pistol" viewBox="0 0 64 28">
+        <path d="M8 8h36l5 6-9 2-4 8h-9l2-8H8z" fill="currentColor"/>
+        <path d="M49 10h5v3h-5z" fill="currentColor" opacity=".6"/>
+        <path d="M18 15h12v10H22l-2-5z" fill="currentColor" opacity=".82"/>
+      </symbol>
+      <symbol id="ticon-pistol2" viewBox="0 0 64 28">
+        <path d="M6 9h40l14 4-2 4-15 1-4 9h-9l1-9H6z" fill="currentColor"/>
+        <path d="M18 16h12v10h-8l-2-5z" fill="currentColor" opacity=".82"/>
+        <path d="M35 9h4v4h-4z" fill="#111" opacity=".6"/>
+      </symbol>
+      <symbol id="ticon-smg" viewBox="0 0 64 28">
+        <path d="M15 7h27l4 5 10 2v4H39l-3 8h-9l2-8H15z" fill="currentColor"/>
+        <path d="M18 15h15v11H23l-3-5z" fill="currentColor" opacity=".8"/>
+        <path d="M4 10h11v5H4z" fill="currentColor" opacity=".65"/>
+        <path d="M42 8h3v3h-3z" fill="#111" opacity=".55"/>
+      </symbol>
+      <symbol id="ticon-rifle" viewBox="0 0 64 28">
+        <path d="M5 9h44l11 3v4l-11 1-3 8h-9l1-8H24l-3 9h-8l2-9H5z" fill="currentColor"/>
+        <path d="M19 15h16v11H26l-4-5z" fill="currentColor" opacity=".8"/>
+        <path d="M31 9h15v3H31z" fill="#111" opacity=".4"/>
+        <path d="M48 9h4v4h-4z" fill="currentColor" opacity=".55"/>
+      </symbol>
+      <symbol id="ticon-lmg" viewBox="0 0 64 28">
+        <path d="M7 8h42l12 4-1 5-12 1-3 8h-9l2-8H25l-3 9h-8l2-9H7z" fill="currentColor"/>
+        <path d="M20 15h14v11H24l-4-6z" fill="currentColor" opacity=".8"/>
+        <circle cx="49" cy="19" r="6" fill="none" stroke="currentColor" stroke-width="2.2" opacity=".7"/>
+        <path d="M4 10h10v4H4z" fill="currentColor" opacity=".6"/>
+      </symbol>
+    </defs>
+  </svg>
+
   <div id="game-container">
     <canvas id="game-canvas"></canvas>
 
@@ -84,6 +185,7 @@
 
       <!-- Tab 背包面板 -->
       <div id="backpack-panel">
+        <button type="button" id="bp-close-btn" aria-label="关闭背包">✕</button>
         <div class="bp-title">🎒 背包 <span id="bp-gold" class="bp-gold">💰 哈基币 0</span></div>
         <div class="bp-main">
           <div class="bp-left">
@@ -95,6 +197,10 @@
           </div>
         </div>
         <div class="bp-hint">💡 把物品拖出面板外即可丢弃</div>
+        <div class="bp-mobile-bar">
+          <span>先点物品，再点目标格子进行移动 / 存入保险箱</span>
+          <button type="button" id="bp-touch-discard">丢弃选中</button>
+        </div>
       </div>
 
       <!-- 受伤闪屏 -->
@@ -104,12 +210,187 @@
       <div id="hint">点击鼠标锁定视角 · WASD 移动 · 左键射击 · 右键开镜 · R 换弹 · F 开箱 · 长按 Tab 背包 · 1-5 切枪 · Shift 静步</div>
     </div>
 
+    <!-- ==================== 手机横屏 · 手游键位 ==================== -->
+    <div id="mobile-controls" aria-hidden="true">
+      <!-- 空白区域拖动 = 瞄准 -->
+      <div id="touch-aimzone" aria-label="拖动屏幕瞄准"></div>
+
+      <!-- 安全区内层：避开刘海 / 挖孔 / 底部手势条，百分比坐标以此层为基准 -->
+      <div id="touch-safe">
+      <!-- 左上：虚拟摇杆 -->
+      <div id="touch-joystick" class="tkey touch-joystick" data-key="move" role="group" aria-label="移动摇杆">
+        <span class="joy-base">
+          <span class="joy-axis joy-axis-h"></span>
+          <span class="joy-axis joy-axis-v"></span>
+          <span class="joy-tick joy-tick-w">W</span>
+          <span class="joy-tick joy-tick-a">A</span>
+          <span class="joy-tick joy-tick-s">S</span>
+          <span class="joy-tick joy-tick-d">D</span>
+          <span class="joy-knob" id="joy-knob">
+            <span class="joy-knob-core"></span>
+          </span>
+        </span>
+        <span class="tk-caption">移动 <b>MOVE</b></span>
+      </div>
+
+      <!-- 右下：开火主键 -->
+      <button type="button" id="touch-fire" class="tkey tactical-key key-fire" data-key="fire" aria-label="开火">
+        <span class="tk-halo"></span>
+        <span class="tk-face">
+          <svg class="tk-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="#ticon-fire"></use></svg>
+          <span class="tk-label">开火</span>
+          <span class="tk-sub">FIRE</span>
+        </span>
+      </button>
+
+      <!-- 开镜 -->
+      <button type="button" id="touch-ads" class="tkey tactical-key key-ads" data-key="ads" aria-label="开镜">
+        <span class="tk-face">
+          <svg class="tk-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="#ticon-ads"></use></svg>
+          <span class="tk-label">开镜</span>
+          <span class="tk-sub">ADS</span>
+        </span>
+      </button>
+
+      <!-- 换弹 -->
+      <button type="button" id="touch-reload" class="tkey tactical-key key-reload" data-key="reload" aria-label="换弹">
+        <span class="tk-face">
+          <svg class="tk-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="#ticon-reload"></use></svg>
+          <span class="tk-label">换弹</span>
+          <span class="tk-sub">RELOAD</span>
+        </span>
+      </button>
+
+      <!-- 跳跃 -->
+      <button type="button" id="touch-jump" class="tkey tactical-key key-jump" data-key="jump" aria-label="跳跃">
+        <span class="tk-face">
+          <svg class="tk-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="#ticon-jump"></use></svg>
+          <span class="tk-label">跳跃</span>
+          <span class="tk-sub">JUMP</span>
+        </span>
+      </button>
+
+      <!-- 静步 -->
+      <button type="button" id="touch-walk" class="tkey tactical-key key-walk" data-key="walk" aria-label="切换静步" aria-pressed="false">
+        <span class="tk-face">
+          <svg class="tk-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="#ticon-boot"></use></svg>
+          <span class="tk-label">静步</span>
+          <span class="tk-sub">WALK</span>
+        </span>
+      </button>
+
+      <!-- 开箱 / 补给 -->
+      <button type="button" id="touch-interact" class="tkey tactical-key key-interact is-unavailable" data-key="interact" aria-label="交互">
+        <span class="tk-progress" id="touch-interact-progress"></span>
+        <span class="tk-face">
+          <svg class="tk-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="#ticon-interact"></use></svg>
+          <span class="tk-label" id="touch-interact-label">开箱</span>
+          <span class="tk-sub" id="touch-interact-sub">长按</span>
+        </span>
+      </button>
+
+      <!-- 武器快捷栏 -->
+      <div id="touch-weaponbar" class="tkey touch-weaponbar" data-key="weapons" role="group" aria-label="武器快捷栏">
+        <div class="tw-shell">
+          <div class="tw-slots" id="tw-slots"></div>
+        </div>
+        <span class="tw-caption" id="tw-caption">武器快捷栏 <b>WEAPONS</b></span>
+      </div>
+      </div><!-- /touch-safe -->
+
+      <!-- 顶部快捷：背包 / 暂停 -->
+      <div id="touch-quick" aria-label="快捷操作">
+        <button type="button" id="touch-bag-btn" class="tq-btn" aria-label="打开背包">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#ticon-bag"></use></svg>
+          <span>背包</span>
+        </button>
+        <button type="button" id="touch-pause-btn" class="tq-btn" aria-label="暂停">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#ticon-pause"></use></svg>
+          <span>暂停</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 手机暂停面板 -->
+    <div id="touch-pause" role="dialog" aria-modal="true" aria-labelledby="touch-pause-title">
+      <div class="tp-box">
+        <div class="tp-topline"><span>DELTA FIFTH</span><span>FIELD LINK · 横屏战术界面</span></div>
+        <div class="tp-head">
+          <div>
+            <div class="tp-kicker">TACTICAL HOLD</div>
+            <div class="tp-title" id="touch-pause-title">战术暂停</div>
+          </div>
+          <button type="button" id="touch-pause-close" class="tp-close" aria-label="继续游戏">✕</button>
+        </div>
+        <div class="tp-actions">
+          <button type="button" id="tp-resume" class="tp-action tp-primary">
+            <span class="tp-no">01</span>
+            <span class="tp-action-main">继续行动<small>返回战场</small></span>
+            <span class="tp-arrow">▶</span>
+          </button>
+          <button type="button" id="tp-layout" class="tp-action">
+            <span class="tp-no">02</span>
+            <span class="tp-action-main">自定义键位<small>拖动 / 缩放</small></span>
+            <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#ticon-layout"></use></svg>
+          </button>
+        </div>
+        <div class="tp-sens">
+          <div class="tp-sens-head"><span>视角灵敏度</span><b id="tp-sens-value">0.50</b></div>
+          <input id="tp-sens-slider" type="range" min="0" max="1" step="0.01" value="0.5">
+          <div class="tp-sens-scale"><span>稳</span><span>快</span></div>
+        </div>
+        <div class="tp-foot"><span class="tp-live-dot"></span>已启用手游键位 · 所有键位可在「自定义键位」中拖动与缩放</div>
+      </div>
+    </div>
+
+    <!-- 键位布局编辑器 -->
+    <div id="touch-layout-ui">
+      <div class="tl-top">
+        <div class="tl-brand">
+          <span class="tl-mark"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#ticon-layout"></use></svg></span>
+          <span><b>自定义手游键位</b><small>拖动键位移动 · 双指捏合缩放 · 自动保存</small></span>
+        </div>
+        <button type="button" id="tl-done">完成 <span>✓</span></button>
+      </div>
+      <div class="tl-dock">
+        <div class="tl-current"><span>当前键位</span><b id="tl-selected-name">开火</b></div>
+        <div class="tl-scaler">
+          <span>大小</span>
+          <button type="button" id="tl-shrink" aria-label="缩小选中键位"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ticon-minus"></use></svg></button>
+          <b id="tl-scale-val">100%</b>
+          <button type="button" id="tl-grow" aria-label="放大选中键位"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ticon-plus"></use></svg></button>
+        </div>
+        <button type="button" id="tl-reset" class="tl-reset">恢复默认</button>
+      </div>
+    </div>
+
+    <!-- 竖屏提示 -->
+    <div id="mobile-orientation" aria-live="polite">
+      <div class="mo-card">
+        <div class="mo-device" aria-hidden="true">
+          <span class="mo-screen"><i></i><i></i><i></i></span>
+          <span class="mo-rotate">↻</span>
+        </div>
+        <div class="mo-copy">
+          <div class="mo-kicker">MOBILE FIELD SYSTEM</div>
+          <div class="mo-title">请横屏握持</div>
+          <p>检测到手机设备，横屏后将自动进入手游键位。<br>左摇杆移动，拖动空白屏幕瞄准，右下开火。</p>
+          <div class="mo-chips"><span>横屏适配</span><span>自定义键位</span><span>自动检测</span></div>
+        </div>
+      </div>
+    </div>
+
     <!-- 主菜单（仓库 + 统计） -->
     <div id="menu-panel">
       <div class="menu-box">
         <div class="menu-head">
           <h1>Delta Fifth（四角洲不动）</h1>
           <div class="menu-sub">搜刮 · 战斗 · 撤离</div>
+          <div id="mobile-device-badge">
+            <span class="md-signal"><i></i><i></i><i></i></span>
+            <b>检测到手机</b>
+            <span>横屏手游键位已启用 · 可自由拖动缩放</span>
+          </div>
         </div>
         <div class="menu-body">
           <div class="menu-side">
@@ -229,7 +510,9 @@
           <h3>🚁 撤离时间线（10 分钟）</h3>
           <p>开局 60 秒内无法撤离；60~90 秒为付费撤离（需支付 500 哈基币，不足则无法撤离）；90 秒后进入无条件免费撤离；第 7 分钟提示「即将结束」；第 8 分钟起再次付费撤离（持续 120 秒）；10 分钟耗尽仍未撤离则失败。付费撤离从背包按品质低到高删除价值 500 的物品，超出部分转为点数。</p>
           <h3>🕹️ 操作</h3>
-          <p>WASD 移动 · 鼠标锁定视角 · 左键射击 · 右键开镜 · R 换弹 · 1-5 切枪 · Shift 静步 · F 开箱 · 长按 Tab 打开背包。</p>
+          <p>电脑：WASD 移动 · 鼠标锁定视角 · 左键射击 · 右键开镜 · R 换弹 · 1-5 切枪 · Shift 静步 · F 开箱 · 长按 Tab 打开背包。</p>
+          <h3>📱 手机横屏 · 手游键位</h3>
+          <p>检测到手机后会自动启用横屏手游键位：左侧摇杆移动，拖动空白屏幕瞄准，右下开火，周围是开镜 / 换弹 / 跳跃 / 静步 / 开箱交互，底部为武器快捷栏。点击顶部「暂停」可调整视角灵敏度或进入「自定义键位」，拖动键位定位、双指捏合或加减按钮缩放，布局会自动保存。横屏受限时会显示旋转提示。</p>
           <h3>🚪 进入方式</h3>
           <p>开局选择进入方式：eco 进入（50 血 · 背包 6 格 · 免费）或买票进入（100 血 · 背包 9 格 · 200 点）；可选购护甲（半甲 / 全甲 / 重甲，加血加背包格）、血包、开局武器（鬼魅 / 蜂刺 / 狂徒）。</p>
           <h3>💰 局内哈基币</h3>
@@ -346,6 +629,7 @@
   <script src="js/enemy.js"></script>
   <script src="js/player.js"></script>
   <script src="js/hud.js"></script>
+  <script src="js/touch.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

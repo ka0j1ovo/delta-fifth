@@ -9,7 +9,19 @@ const Player = (function () {
   let hitbox = null;
   let locked = false, mouseDown = false, footstepTimer = 0, lockJustAcquired = false, ads = false;
   let active = false, backpackOpen = false;
+  // 手机触屏输入：由 touch.js 写入，与鼠标/键盘输入并行但互不冲突
+  let touchMoveX = 0, touchMoveZ = 0, touchFiring = false, touchWalking = false;
   const keys = {};
+
+  function isTouchUI() {
+    return typeof TOUCH !== 'undefined' && TOUCH.isEnabled();
+  }
+  function touchCanAct() {
+    return active && alive && !backpackOpen && !(typeof HUD !== 'undefined' && HUD.isOverlayVisible());
+  }
+  function resetTouchInput() {
+    touchMoveX = 0; touchMoveZ = 0; touchFiring = false;
+  }
 
   function init(sc, cam) {
     scene = sc; camera = cam;
@@ -41,7 +53,7 @@ const Player = (function () {
   }
 
   function onMouseMove(e) {
-    if (!locked) return;
+    if (isTouchUI() || !locked) return;
     if (lockJustAcquired) { lockJustAcquired = false; return; }
     const mx = e.movementX, my = e.movementY;
     if (!Number.isFinite(mx) || !Number.isFinite(my)) return;
@@ -55,11 +67,13 @@ const Player = (function () {
   }
 
   function lock() {
+    if (isTouchUI()) return;
     const canvas = document.querySelector('#game-canvas');
     if (canvas.requestPointerLock) canvas.requestPointerLock();
   }
 
   function onMouseDown(e) {
+    if (isTouchUI()) return; // 手机端由触摸层接管，避免浏览器补发的鼠标事件重复开火/请求锁定
     Audio.resume();
     if (e.button === 2) { // 右键开镜：长按或点击（设置里切换）
       if (!active || HUD.isOverlayVisible() || !alive || backpackOpen) return;
@@ -81,6 +95,7 @@ const Player = (function () {
   function openBackpack() {
     if (backpackOpen) return;
     backpackOpen = true;
+    resetTouchInput();
     HUD.setBackpackPanel(true);
     if (document.pointerLockElement) document.exitPointerLock();
     ads = false;
@@ -90,7 +105,7 @@ const Player = (function () {
     if (!backpackOpen) return;
     backpackOpen = false;
     HUD.setBackpackPanel(false);
-    if (active && alive) lock();
+    if (active && alive && !isTouchUI()) lock();
   }
 
   function handleWeaponKey(index) {
@@ -127,12 +142,85 @@ const Player = (function () {
     if (e.code === 'KeyF') BOXES.cancelOpening();
     if (e.code === 'Tab') closeBackpack();
   }
-  function onWheel(e) { if (locked && !backpackOpen) { ads = false; WEAPONS.cycle(e.deltaY > 0 ? 1 : -1); } }
+  function onWheel(e) { if (!isTouchUI() && locked && !backpackOpen) { ads = false; WEAPONS.cycle(e.deltaY > 0 ? 1 : -1); } }
 
   function jump() {
     if (grounded && alive) {
       vel.y = 6.5; grounded = false; Audio.jump();
     }
+  }
+
+  // —— 手机触屏接口 ——
+  function touchLook(dx, dy) {
+    if (!touchCanAct()) return;
+    if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+    // 拖动屏幕的像素 -> 弧度；沿用设置中的灵敏度，开镜降低转向速度
+    const sens = 0.00235 * (0.45 + SETTINGS.getSensitivity() * 1.1) * (ads ? 0.72 : 1);
+    yaw -= Math.max(-260, Math.min(260, dx)) * sens;
+    pitch -= Math.max(-260, Math.min(260, dy)) * sens;
+    if (pitch > 1.55) pitch = 1.55;
+    if (pitch < -1.55) pitch = -1.55;
+  }
+
+  function setTouchMove(x, z) {
+    if (!Number.isFinite(x) || !Number.isFinite(z)) { touchMoveX = 0; touchMoveZ = 0; return; }
+    const len = Math.hypot(x, z);
+    if (len > 1) { x /= len; z /= len; }
+    if (len < 0.08) { x = 0; z = 0; }
+    touchMoveX = x; touchMoveZ = z;
+  }
+
+  function setTouchFire(down) {
+    if (!down) { touchFiring = false; return; }
+    if (!touchCanAct() || !alive) { touchFiring = false; return; }
+    touchFiring = true;
+    Audio.resume();
+    WEAPONS.tryFire(performance.now() / 1000, true);
+  }
+
+  function setTouchWalking(on) {
+    touchWalking = !!on && alive;
+  }
+
+  function getTouchWalking() { return touchWalking; }
+
+  function setTouchAds(on) {
+    if (!on) { ads = false; return; }
+    if (!touchCanAct()) return;
+    ads = true;
+  }
+
+  function toggleTouchAds() {
+    if (!touchCanAct()) return;
+    ads = !ads;
+    return ads;
+  }
+
+  function touchReload() {
+    if (!touchCanAct()) return;
+    WEAPONS.startReload();
+  }
+
+  function touchJump() {
+    if (!touchCanAct()) return;
+    jump();
+  }
+
+  function touchUseWeapon(index) {
+    if (!touchCanAct()) return;
+    const i = Number(index);
+    if (!Number.isInteger(i) || i < 0 || i >= WEAPONS.DEFS.length) return;
+    handleWeaponKey(i);
+  }
+
+  function touchInteractStart() {
+    if (!touchCanAct()) return false;
+    BOXES.startOpening();
+    return true;
+  }
+
+  function touchInteractEnd() {
+    BOXES.cancelOpening();
   }
 
   function takeDamage(dmg) {
@@ -145,6 +233,7 @@ const Player = (function () {
     if (hp <= 0) {
       alive = false;
       ads = false;
+      resetTouchInput();
       Audio.lose();
       return;
     }
@@ -174,22 +263,29 @@ const Player = (function () {
     vel.set(0, 0, 0);
     yaw = Math.PI; pitch = 0;
     ads = false;
+    touchWalking = false;
+    resetTouchInput();
     HUD.setHealth(hp);
   }
 
-  function setActive(v) { active = v; }
+  function setActive(v) {
+    active = !!v;
+    if (!active) { ads = false; resetTouchInput(); touchWalking = false; }
+  }
   function getActive() { return active; }
 
   function update(dt) {
     const now = performance.now() / 1000;
+    const touch = isTouchUI();
     let mx = 0, mz = 0;
-    if (alive && locked && !backpackOpen) {
+    if (alive && (locked || touch) && !backpackOpen) {
       if (keys['KeyW'] || keys['ArrowUp']) mz += 1;
       if (keys['KeyS'] || keys['ArrowDown']) mz -= 1;
       if (keys['KeyA'] || keys['ArrowLeft']) mx -= 1;
       if (keys['KeyD'] || keys['ArrowRight']) mx += 1;
+      if (touch) { mx += touchMoveX; mz += touchMoveZ; }
     }
-    const walking = keys['ShiftLeft'] || keys['ShiftRight'];
+    const walking = keys['ShiftLeft'] || keys['ShiftRight'] || (touch && touchWalking);
     let speed = walking ? 3.0 : 5.5;
     if (ads) speed *= 0.6; // 开镜减速
     const len = Math.hypot(mx, mz);
@@ -221,8 +317,8 @@ const Player = (function () {
       if (footstepTimer <= 0) { Audio.footstep(); footstepTimer = walking ? 0.5 : 0.32; }
     }
 
-    // 全自动按住连发
-    if (mouseDown && alive && locked && !backpackOpen && WEAPONS.def().auto) {
+    // 全自动按住连发（鼠标左键 / 手机开火键）
+    if ((mouseDown || touchFiring) && alive && (locked || touch) && !backpackOpen && WEAPONS.def().auto) {
       WEAPONS.tryFire(now, true);
     }
 
@@ -243,6 +339,10 @@ const Player = (function () {
 
   return {
     init, update, takeDamage, heal, respawn, setActive, getActive, setMaxHp,
+    openBackpack, closeBackpack,
+    touchLook, setTouchMove, setTouchFire, setTouchWalking, getTouchWalking,
+    setTouchAds, toggleTouchAds, touchReload, touchJump, touchUseWeapon,
+    touchInteractStart, touchInteractEnd,
     pos,
     get hitbox() { return hitbox; },
     get alive() { return alive; },

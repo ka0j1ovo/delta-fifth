@@ -399,6 +399,7 @@ const HUD = (function () {
   // —— Tab 背包面板 ——
   function setBackpackPanel(open) {
     el.backpackPanel.classList.toggle('show', open);
+    if (typeof TOUCH !== 'undefined') TOUCH.onBackpackPanel(!!open);
     if (!open) return;
     renderBackpack();
   }
